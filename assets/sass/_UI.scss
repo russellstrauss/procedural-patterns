@@ -1,0 +1,286 @@
+$buttonWidth: 175px;
+
+@mixin hover-state {
+	opacity: .75;
+	cursor: pointer;
+	
+	&:hover {
+		opacity: 1;
+	}
+}
+
+.play-selection {
+	pointer-events: none;
+	position: fixed;
+	top: 20px;
+	left: 20px;
+	
+	@include mobile-only {
+		top: 10px;
+		left: 10px;
+	}
+	
+	select {
+		@include hover-state;
+		pointer-events: auto;
+		display: block;
+		padding: 10px;
+		border: 1px solid rgb(169, 169, 169);
+		margin: 0 0 10px 0;
+		width: 100%;
+		
+		@include mobile-only {
+			padding: 5px;
+		}
+		
+		option {
+			font-size: 16px;
+		}
+	}
+	
+	.instrument-names {
+		@include disable-highlight;
+		padding: 0;
+		width: 50%;
+		font-size: 16px;
+		
+		@include mobile-only {
+			top: 0;
+			right: 0;
+			width: 100px;
+			position: fixed;
+			font-size: 10px;
+			font-weight: bold;
+			margin: 0;
+		}
+		
+		li {
+			list-style-type: none;
+			padding: 8px 15px;
+			
+			@include mobile-only {
+				padding: 1px 5px;
+			}
+		}
+	}
+}
+
+.clear-notes {
+	@include hover-state;
+	width: $buttonWidth;
+	position: fixed;
+	bottom: 20px;
+	right: 20px;
+	padding: 10px;
+	background: white;
+	border: 1px solid rgb(169, 169, 169);
+	cursor: pointer;
+	opacity: .75;
+	
+	@include mobile-only {
+		width: calc(100vw - 40px);
+		display: block;
+		bottom: 10px;
+	}
+	
+	&:hover {
+		opacity: 1;
+	}
+}
+
+#message {
+	font-size: 22px;
+	position: absolute;
+	left: 50%;
+	top: 20px;
+	transform: translateX(-50%);
+}
+
+$legendWidth: 150px;
+#legend {
+	width: $legendWidth;
+	font-size: 12px;
+	position: absolute;
+	bottom: 20px;
+	left: 20px;
+	
+	.legend-title {
+		font-size: 18px;
+	}
+	
+	.backdrop {
+		border: 1px solid black;
+		background-color: rgba(255, 255, 255, .4);
+		padding: 5px;
+		margin-top: 5px;
+	}
+	
+	table {
+		width: 100%;
+		
+		thead {
+			
+			tr {
+				font-weight: bold;
+				
+				&.divider {
+					vertical-align: top;
+				}
+			}
+		}
+		
+		tr {
+			
+			&.divider {
+				height: 20px;
+				vertical-align: bottom;
+			}
+			
+			td {
+				width: 50%;
+				
+				
+				&:last-of-type {
+					text-align: right;
+				}
+			}
+		}
+	}
+}
+
+.play-controls {
+	position: absolute;
+	//left: $legendWidth + 40px;
+	left: 20px;
+	bottom: 10px;
+	display: flex;
+	flex-direction: row;
+	
+	@include mobile-only {
+		bottom: 60px;
+		display: flex;
+		justify-content: space-between;
+	}
+	
+	.control {
+		margin-right: 30px;
+	}
+	
+	.play-toggle {
+		display: flex;
+		flex-direction: column;
+		justify-content: flex-end;
+		
+		&.active {
+			
+			.play {
+				display: none;
+			}
+			
+			.pause {
+				display: block;
+			}
+		}
+		
+		.play {
+			display: block;
+		}
+		
+		.pause {
+			display: none;
+		}
+		
+		.play, .pause {
+			width: 50px;
+			height: 50px;
+			cursor: pointer;
+		}
+	}
+}
+
+.input-stepper {
+	display: flex;
+	flex-direction: column;
+	justify-content: flex-end;
+	
+	label {
+		text-align: center;
+		display: block;
+	}
+	
+	.input-items {
+		display: flex;
+		
+		input {
+			width: 4rem;
+			text-align: center;
+			appearance: none;
+			-moz-appearance: textfield;
+		}
+		
+		input[type="number"]::-webkit-outer-spin-button,
+		input[type="number"]::-webkit-inner-spin-button {
+			-webkit-appearance: none;
+			margin: 0;
+		}
+	
+		button, input {
+			font-size: 2rem;
+			font-weight: bold;
+			text-align: center;
+			border: 0;
+			background: none;
+			
+			
+			&:focus {
+				outline: none;
+			}
+		}
+		
+		input {
+			transition: all 125ms ease;
+			
+			&:hover {
+				transform: scale(1.1);
+			}
+		}
+		
+		button {
+			width: 1em;
+			cursor: pointer;
+			
+			&:hover {
+				transform: scale(1.2);
+			}
+		}
+	}
+}
+
+#author {
+	@include disable-highlight;
+	position: absolute;
+	right: 20px;
+	top: 20px;
+	display: flex;
+	font-size: 12px;
+	pointer-events: none;
+	
+	@include mobile-only {
+		display: none;
+	}
+	
+	.column {
+		
+		&.description {
+			text-align: right;
+			padding-right: 10px;
+		}
+		
+		.portrait {
+			display: flex;
+			border: 1px solid black;
+			width: 100px;
+			margin-bottom: 5px;
+		}
+	}
+}
