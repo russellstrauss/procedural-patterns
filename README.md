@@ -1,4 +1,4 @@
-# P2 - Procedural Pattern Generation
+# P3 - Procedural Pattern Generation
 
 A tool for creating and visualizing repeatable patterns.
 

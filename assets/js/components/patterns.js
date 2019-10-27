@@ -57,7 +57,7 @@ module.exports = function() {
 				if (controls) controls.update();
 				
 				position = curvePoints[(frameCount * 10) % curvePoints.length]; // 10 is the speed
-				//dot.position.set(position.x, position.y, 0);
+				dot.position.set(position.x, position.y, 0);
 				//camera.position.set(position.x, position.y, 0); // must disable controls for it to work
 				
 				frameCount++;
@@ -114,7 +114,44 @@ module.exports = function() {
 			
 			// Affine transformations
 			let start =  new THREE.Geometry();
-			//start.vertices.push();
+			start.vertices.push(
+				new THREE.Vector3(0, 0, 0),
+				new THREE.Vector3(2, 0, -5),
+				new THREE.Vector3(2, 0, -10),
+				new THREE.Vector3(0, 0, -15)
+			);
+			
+			gfx.showPoints(start, scene);
+			
+			let end =  new THREE.Geometry();
+			end.vertices.push(
+				new THREE.Vector3(-30, 0, 0),
+				new THREE.Vector3(-20, 0, -5),
+				new THREE.Vector3(-15, 0, -10),
+				new THREE.Vector3(-30, 0, -15)
+			);
+			
+			let steps = 10;
+			let interpolations = [];
+			
+			start.vertices.forEach(function(item, index) {
+				console.log(start.vertices[index], end.vertices[index]);
+				let whole = gfx.createVector(start.vertices[index], end.vertices[index]);
+				
+				for (let i = 0; i < steps; i++) {
+					
+					// multiply whole by linear interpolation
+					let interpolation = whole.length() * (i/steps);
+					let result = gfx.movePoint(item, whole.clone().setLength(interpolation));
+					gfx.showPoint(result, scene);
+				}
+				
+			});
+			
+			
+			
+			
+			gfx.showPoints(end, scene);
 		},
 
 		enableControls: function() {

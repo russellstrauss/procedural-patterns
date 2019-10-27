@@ -53,8 +53,8 @@ module.exports = function () {
         renderer.render(scene, camera);
         if (controls) controls.update();
         position = curvePoints[frameCount * 10 % curvePoints.length]; // 10 is the speed
-        //dot.position.set(position.x, position.y, 0);
-        //camera.position.set(position.x, position.y, 0); // must disable controls for it to work
+
+        dot.position.set(position.x, position.y, 0); //camera.position.set(position.x, position.y, 0); // must disable controls for it to work
 
         frameCount++;
       };
@@ -101,7 +101,26 @@ module.exports = function () {
       scene.add(splineObject);
       dot.position.set(curve.getPoint(.5).x, splineObject.position.y, splineObject.position.z); // Affine transformations
 
-      var start = new THREE.Geometry(); //start.vertices.push();
+      var start = new THREE.Geometry();
+      start.vertices.push(new THREE.Vector3(0, 0, 0), new THREE.Vector3(2, 0, -5), new THREE.Vector3(2, 0, -10), new THREE.Vector3(0, 0, -15));
+      gfx.showPoints(start, scene);
+      var end = new THREE.Geometry();
+      end.vertices.push(new THREE.Vector3(-30, 0, 0), new THREE.Vector3(-20, 0, -5), new THREE.Vector3(-15, 0, -10), new THREE.Vector3(-30, 0, -15));
+      var steps = 10;
+      var interpolations = [];
+      start.vertices.forEach(function (item, index) {
+        console.log(start.vertices[index], end.vertices[index]);
+        var whole = gfx.createVector(start.vertices[index], end.vertices[index]);
+
+        for (var _i = 0; _i < steps; _i++) {
+          // multiply whole by linear interpolation
+          var interpolation = whole.length() * (_i / steps);
+
+          var result = gfx.movePoint(item, whole.clone().setLength(interpolation));
+          gfx.showPoint(result, scene);
+        }
+      });
+      gfx.showPoints(end, scene);
     },
     enableControls: function enableControls() {
       controls = new THREE.OrbitControls(camera, renderer.domElement);
