@@ -37,13 +37,13 @@ module.exports = function () {
     },
     begin: function begin() {
       var self = this;
-      scene = gfx.setUpScene(scene);
+      scene = gfx.setUpScene();
       renderer = gfx.setUpRenderer(renderer);
       camera = gfx.setUpCamera(camera);
       controls = gfx.enableControls(controls, renderer, camera);
       gfx.resizeRendererOnWindowResize(renderer, camera);
       self.bindUIEvents();
-      gfx.setUpLights(scene);
+      gfx.setUpLights();
       gfx.setCameraLocation(camera, self.settings.defaultCameraLocation);
       self.addGeometries();
       var position;
@@ -63,7 +63,7 @@ module.exports = function () {
     },
     addGeometries: function addGeometries() {
       var self = this;
-      floor = gfx.addFloor(this.settings.floorSize, scene, this.settings.colors.worldColor, this.settings.colors.gridColor);
+      floor = gfx.addFloor(this.settings.floorSize, this.settings.colors.worldColor, this.settings.colors.gridColor);
       var texture = new THREE.TextureLoader().load('assets/img/flower.jpg');
       texture.minFilter = THREE.LinearFilter;
       var material = new THREE.MeshBasicMaterial({
@@ -103,7 +103,7 @@ module.exports = function () {
 
       var start = new THREE.Geometry();
       start.vertices.push(new THREE.Vector3(0, 0, 0), new THREE.Vector3(2, 0, -5), new THREE.Vector3(2, 0, -10), new THREE.Vector3(0, 0, -15));
-      gfx.showPoints(start, scene);
+      gfx.showPoints(start);
       var end = new THREE.Geometry();
       end.vertices.push(new THREE.Vector3(-30, 0, 0), new THREE.Vector3(-20, 0, -5), new THREE.Vector3(-15, 0, -10), new THREE.Vector3(-30, 0, -15));
       var steps = 10;
@@ -117,10 +117,10 @@ module.exports = function () {
           var interpolation = whole.length() * (_i / steps);
 
           var result = gfx.movePoint(item, whole.clone().setLength(interpolation));
-          gfx.showPoint(result, scene);
+          gfx.showPoint(result);
         }
       });
-      gfx.showPoints(end, scene);
+      gfx.showPoints(end);
     },
     enableControls: function enableControls() {
       controls = new THREE.OrbitControls(camera, renderer.domElement);
@@ -227,6 +227,7 @@ module.exports = function () {
 
 (function () {
   var appSettings;
+  var scene;
 
   window.gfx = function () {
     return {
@@ -240,26 +241,25 @@ module.exports = function () {
           enable: true,
           fontStyle: {
             font: null,
-            size: 0.5,
+            size: 2,
             height: 0,
             curveSegments: 1
           }
         },
         errorLogging: false
       },
-      activateAxesHelper: function activateAxesHelper(scene) {
+      activateAxesHelper: function activateAxesHelper() {
         var self = this;
         var axesHelper = new THREE.AxesHelper(gfx.appSettings.axesHelper.axisLength);
         scene.add(axesHelper);
-        if (self.appSettings.font.enable) gfx.labelAxes(scene);
       },
-      activateLightHelpers: function activateLightHelpers(scene, lights) {
+      activateLightHelpers: function activateLightHelpers(lights) {
         for (var i = 0; i < lights.length; i++) {
           var helper = new THREE.DirectionalLightHelper(lights[i], 5, 0x00000);
           scene.add(helper);
         }
       },
-      addFloor: function addFloor(size, scene, worldColor, gridColor) {
+      addFloor: function addFloor(size, worldColor, gridColor) {
         var planeGeometry = new THREE.PlaneBufferGeometry(size, size);
         planeGeometry.rotateX(-Math.PI / 2);
         var planeMaterial = new THREE.ShadowMaterial();
@@ -268,10 +268,11 @@ module.exports = function () {
         plane.receiveShadow = true;
         scene.add(plane);
         var helper = new THREE.GridHelper(size, 20, gridColor, gridColor);
-        helper.material.opacity = 0.1;
+        helper.material.opacity = .1;
         helper.material.transparent = true;
         scene.add(helper);
-        scene.background = worldColor;
+        scene.background = worldColor; //scene.fog = new THREE.FogExp2(new THREE.Color('black'), 0.002);
+
         return plane;
       },
       createVector: function createVector(pt1, pt2) {
@@ -301,6 +302,47 @@ module.exports = function () {
         });
         return new THREE.Vector3(highest.x, highest.y, highest.z);
       },
+      sortVerticesClockwise: function sortVerticesClockwise(geometry) {
+        var self = this;
+        var midpoint = new THREE.Vector3(0, 0, 0);
+        geometry.vertices.forEach(function (vertex) {
+          midpoint.x += vertex.x - .001; // very slight offset for the case where polygon is a quadrilateral so that not all angles are equal
+
+          midpoint.y += vertex.y;
+          midpoint.z += vertex.z - .001;
+        });
+        midpoint.x /= geometry.vertices.length;
+        midpoint.y /= geometry.vertices.length;
+        midpoint.z /= geometry.vertices.length;
+        var sorted = geometry.clone();
+        sorted.vertices.forEach(function (vertex) {
+          var vec = gfx.createVector(midpoint, vertex);
+          var vecNext = gfx.createVector(midpoint, utils.next(sorted.vertices, vertex));
+          var angle = gfx.getAngleBetweenVectors(vec, vecNext);
+          vertex.angle = angle;
+        });
+        sorted.vertices.sort(function (a, b) {
+          return a.angle - b.angle;
+        });
+        return sorted;
+      },
+      createLine: function createLine(pt1, pt2) {
+        var geometry = new THREE.Geometry();
+        geometry.vertices.push(pt1);
+        geometry.vertices.push(pt2);
+        return geometry;
+      },
+      intersection: function intersection(line1, line2) {
+        var pt1 = line1.vertices[0];
+        var pt2 = line1.vertices[1];
+        var pt3 = line2.vertices[0];
+        var pt4 = line2.vertices[1];
+        var lerpLine1 = ((pt4.x - pt3.x) * (pt1.z - pt3.z) - (pt4.z - pt3.z) * (pt1.x - pt3.x)) / ((pt4.z - pt3.z) * (pt2.x - pt1.x) - (pt4.x - pt3.x) * (pt2.z - pt1.z));
+        var lerpLine2 = ((pt2.x - pt1.x) * (pt1.z - pt3.z) - (pt2.z - pt1.z) * (pt1.x - pt3.x)) / ((pt4.z - pt3.z) * (pt2.x - pt1.x) - (pt4.x - pt3.x) * (pt2.z - pt1.z));
+        var x = pt1.x + lerpLine1 * (pt2.x - pt1.x);
+        var z = pt1.z + lerpLine1 * (pt2.z - pt1.z);
+        return new THREE.Vector3(x, 0, z);
+      },
       getMagnitude: function getMagnitude(vector) {
         var magnitude = Math.sqrt(Math.pow(vector.x, 2) + Math.pow(vector.y, 2) + Math.pow(vector.z, 2));
         return magnitude;
@@ -312,23 +354,6 @@ module.exports = function () {
         midpoint.z = (pt1.z + pt2.z) / 2;
         return midpoint;
       },
-      getBottomFace: function getBottomFace(tetrahedronGeometry) {
-        var self = this;
-        var bottomFace = new THREE.Geometry();
-        tetrahedronGeometry.vertices.forEach(function (vertex) {
-          if (utils.roundHundreths(vertex.y) === 0) {
-            bottomFace.vertices.push(vertex);
-          }
-        });
-        return bottomFace;
-      },
-      getCentroidOfBottomFace: function getCentroidOfBottomFace(tetrahedronGeometry) {
-        var centroidOfBottomFace = {};
-        centroidOfBottomFace.x = (tetrahedronGeometry.vertices[0].x + tetrahedronGeometry.vertices[1].x + tetrahedronGeometry.vertices[3].x) / 3;
-        centroidOfBottomFace.y = (tetrahedronGeometry.vertices[0].y + tetrahedronGeometry.vertices[1].y + tetrahedronGeometry.vertices[3].y) / 3;
-        centroidOfBottomFace.z = (tetrahedronGeometry.vertices[0].z + tetrahedronGeometry.vertices[1].z + tetrahedronGeometry.vertices[3].z) / 3;
-        return centroidOfBottomFace;
-      },
       isRightTurn: function isRightTurn(startingPoint, turningPoint, endingPoint) {
         // This might only work if vectors are flat on the ground since I am using y-component to determine sign
         var segment1 = gfx.createVector(startingPoint, turningPoint);
@@ -338,10 +363,7 @@ module.exports = function () {
         return result.y > 0;
       },
       rotatePointAboutLine: function rotatePointAboutLine(pt, axisPt1, axisPt2, angle) {
-        var self = this; // uncomment to visualize endpoints of rotation axis
-        // self.showPoint(axisPt1, new THREE.Color('red'));
-        // self.showPoint(axisPt2, new THREE.Color('red'));
-
+        var self = this;
         var u = new THREE.Vector3(0, 0, 0),
             rotation1 = new THREE.Vector3(0, 0, 0),
             rotation2 = new THREE.Vector3(0, 0, 0);
@@ -401,12 +423,12 @@ module.exports = function () {
 
         return geometry;
       },
-      setUpScene: function setUpScene(scene, renderer) {
+      setUpScene: function setUpScene() {
         scene = new THREE.Scene();
         scene.background = new THREE.Color(0xf0f0f0);
 
         if (gfx.appSettings.axesHelper.activateAxesHelper) {
-          gfx.activateAxesHelper(scene);
+          gfx.activateAxesHelper();
         }
 
         return scene;
@@ -421,14 +443,14 @@ module.exports = function () {
         camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 1, 1000);
         return camera;
       },
-      showPoints: function showPoints(geometry, scene, color, opacity) {
+      showPoints: function showPoints(geometry, color, opacity) {
         var self = this;
 
         for (var i = 0; i < geometry.vertices.length; i++) {
-          gfx.showPoint(geometry.vertices[i], scene, color, opacity);
+          gfx.showPoint(geometry.vertices[i], color, opacity);
         }
       },
-      showPoint: function showPoint(pt, scene, color, opacity) {
+      showPoint: function showPoint(pt, color, opacity) {
         color = color || 0xff0000;
         opacity = opacity || 1;
         var dotGeometry = new THREE.Geometry();
@@ -444,12 +466,29 @@ module.exports = function () {
         scene.add(dot);
         return dot;
       },
-      showVector: function showVector(vector, origin, scene, color) {
+      showVector: function showVector(vector, origin, color) {
         color = color || 0xff0000;
         var arrowHelper = new THREE.ArrowHelper(vector, origin, vector.length(), color);
         scene.add(arrowHelper);
       },
-      drawLine: function drawLine(pt1, pt2, scene, color) {
+
+      /* 	Inputs: pt - point in space to label, in the form of object with x, y, and z properties; label - text content for label; color - optional */
+      labelPoint: function labelPoint(pt, label, color) {
+        var self = this;
+
+        if (gfx.appSettings.font.enable) {
+          color = color || 0xff0000;
+          var textGeometry = new THREE.TextGeometry(label, self.appSettings.font.fontStyle);
+          var textMaterial = new THREE.MeshBasicMaterial({
+            color: color
+          });
+          var mesh = new THREE.Mesh(textGeometry, textMaterial);
+          textGeometry.rotateX(-Math.PI / 2);
+          textGeometry.translate(pt.x, pt.y, pt.z);
+          scene.add(mesh);
+        }
+      },
+      drawLine: function drawLine(pt1, pt2, color) {
         color = color || 0x0000ff;
         var material = new THREE.LineBasicMaterial({
           color: color
@@ -459,20 +498,13 @@ module.exports = function () {
         geometry.vertices.push(new THREE.Vector3(pt2.x, pt2.y, pt2.z));
         var line = new THREE.Line(geometry, material);
         scene.add(line);
-        return line;
-      },
-      createLine: function createLine(pt1, pt2) {
-        var geometry = new THREE.Geometry();
-        geometry.vertices.push(pt1);
-        geometry.vertices.push(pt2);
-        return geometry;
       },
       getDistance: function getDistance(pt1, pt2) {
         // create point class?
         var squirt = Math.pow(pt2.x - pt1.x, 2) + Math.pow(pt2.y - pt1.y, 2) + Math.pow(pt2.z - pt1.z, 2);
         return Math.sqrt(squirt);
       },
-      labelAxes: function labelAxes(scene) {
+      labelAxes: function labelAxes() {
         var self = this;
 
         if (gfx.appSettings.font.enable) {
@@ -513,7 +545,7 @@ module.exports = function () {
           }
         }, 250));
       },
-      resetScene: function resetScene(scope, scene) {
+      resetScene: function resetScene(scope) {
         scope.settings.stepCount = 0;
 
         for (var i = scene.children.length - 1; i >= 0; i--) {
@@ -521,9 +553,9 @@ module.exports = function () {
           scene.remove(obj);
         }
 
-        gfx.addFloor(scene);
+        gfx.addFloor();
         scope.addTetrahedron();
-        gfx.setUpLights(scene);
+        gfx.setUpLights();
         gfx.setCameraLocation(camera, self.settings.defaultCameraLocation);
       },
       enableControls: function enableControls(controls, renderer, camera) {
@@ -534,6 +566,7 @@ module.exports = function () {
         controls.dampingFactor = 0.05;
         controls.zoomSpeed = 2;
         controls.enablePan = !utils.mobile();
+        controls.panSpeed = 1.5;
         controls.minDistance = 10;
         controls.maxDistance = 800;
         controls.maxPolarAngle = Math.PI / 2;
@@ -542,7 +575,7 @@ module.exports = function () {
       enableStats: function enableStats(stats) {
         document.body.appendChild(stats.dom);
       },
-      setUpLights: function setUpLights(scene) {
+      setUpLights: function setUpLights() {
         var self = this;
         var lights = [];
         var color = 0xFFFFFF;
@@ -591,7 +624,7 @@ module.exports = function () {
         result.z = z / 4;
         return result;
       },
-      getCentroid2D: function getCentroid2D(geometry, scene) {
+      getCentroid2D: function getCentroid2D(geometry) {
         // Calculating centroid of a tetrahedron: https://www.youtube.com/watch?v=Infxzuqd_F4
         var result = new THREE.Vector3();
         var x = 0,

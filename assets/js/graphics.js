@@ -1,6 +1,7 @@
 (function () {
 
 	var appSettings;
+	var scene;
 	
 	window.gfx = (function() {
 		
@@ -16,23 +17,22 @@
 					enable: true,
 					fontStyle: {
 						font: null,
-						size: 0.5,
+						size: 2,
 						height: 0,
 						curveSegments: 1
-					},
+					}
 				},
 				errorLogging: false
 			},
 
-			activateAxesHelper: function(scene) {
+			activateAxesHelper: function() {
 			
 				let self = this;
 				let axesHelper = new THREE.AxesHelper(gfx.appSettings.axesHelper.axisLength);
 				scene.add(axesHelper);
-				if (self.appSettings.font.enable) gfx.labelAxes(scene);
 			},
 
-			activateLightHelpers: function(scene, lights) {
+			activateLightHelpers: function(lights) {
 
 				for (let i = 0; i < lights.length; i++) {
 					let helper = new THREE.DirectionalLightHelper(lights[i], 5, 0x00000);
@@ -40,7 +40,7 @@
 				}
 			},
 
-			addFloor: function(size, scene, worldColor, gridColor) {
+			addFloor: function(size, worldColor, gridColor) {
 
 				var planeGeometry = new THREE.PlaneBufferGeometry(size, size);
 				planeGeometry.rotateX(-Math.PI / 2);
@@ -52,10 +52,11 @@
 				scene.add(plane);
 	
 				var helper = new THREE.GridHelper(size, 20, gridColor, gridColor);
-				helper.material.opacity = 0.1;
+				helper.material.opacity = .1;
 				helper.material.transparent = true;
 				scene.add(helper);
 				scene.background = worldColor;
+				//scene.fog = new THREE.FogExp2(new THREE.Color('black'), 0.002);
 				
 				return plane;
 			},
@@ -100,6 +101,53 @@
 				return new THREE.Vector3(highest.x, highest.y, highest.z);
 			},
 			
+			sortVerticesClockwise: function(geometry) {
+			
+				let self = this;
+				let midpoint = new THREE.Vector3(0, 0, 0);
+				geometry.vertices.forEach(function(vertex) {
+					midpoint.x += vertex.x - .001; // very slight offset for the case where polygon is a quadrilateral so that not all angles are equal
+					midpoint.y += vertex.y;
+					midpoint.z += vertex.z - .001;
+				});
+				
+				midpoint.x /= geometry.vertices.length;
+				midpoint.y /= geometry.vertices.length;
+				midpoint.z /= geometry.vertices.length;
+				
+				let sorted = geometry.clone();
+				sorted.vertices.forEach(function(vertex) {
+					
+					let vec = gfx.createVector(midpoint, vertex);
+					let vecNext = gfx.createVector(midpoint, utils.next(sorted.vertices, vertex));
+					let angle = gfx.getAngleBetweenVectors(vec, vecNext);
+					vertex.angle = angle;
+				});
+				
+				sorted.vertices.sort((a, b) => a.angle - b.angle);
+				
+				return sorted;
+			},
+			
+			createLine: function(pt1, pt2) {
+				let geometry = new THREE.Geometry();
+				geometry.vertices.push(pt1);
+				geometry.vertices.push(pt2);
+				return geometry;
+			},
+			
+			intersection: function(line1, line2) {
+			
+				let pt1 = line1.vertices[0]; let pt2 = line1.vertices[1];
+				let pt3 = line2.vertices[0]; let pt4 = line2.vertices[1];
+				let lerpLine1 = ((pt4.x - pt3.x) * (pt1.z - pt3.z) - (pt4.z - pt3.z) * (pt1.x - pt3.x)) / ((pt4.z - pt3.z) * (pt2.x - pt1.x) - (pt4.x - pt3.x) * (pt2.z - pt1.z));
+				let lerpLine2 = ((pt2.x - pt1.x) * (pt1.z - pt3.z) - (pt2.z - pt1.z) * (pt1.x - pt3.x)) / ((pt4.z - pt3.z) * (pt2.x - pt1.x) - (pt4.x - pt3.x) * (pt2.z - pt1.z));
+				
+				let x = pt1.x + lerpLine1 * (pt2.x - pt1.x);
+				let z = pt1.z + lerpLine1 * (pt2.z - pt1.z);
+				return new THREE.Vector3(x, 0, z);
+			},
+			
 			getMagnitude: function(vector) {
 				let magnitude = Math.sqrt(Math.pow(vector.x, 2) + Math.pow(vector.y, 2) + Math.pow(vector.z, 2));
 				return magnitude;
@@ -111,34 +159,7 @@
 				midpoint.x = (pt1.x + pt2.x) / 2;
 				midpoint.y = (pt1.y + pt2.y) / 2;
 				midpoint.z = (pt1.z + pt2.z) / 2;
-				
 				return midpoint;
-			},
-
-			getBottomFace: function(tetrahedronGeometry) {
-			
-				let self = this;
-				let bottomFace = new THREE.Geometry();
-				
-				tetrahedronGeometry.vertices.forEach(function(vertex) {
-					
-					if (utils.roundHundreths(vertex.y) === 0) {
-						
-						bottomFace.vertices.push(vertex);
-					}
-				});
-				
-				return bottomFace;
-			},
-
-			getCentroidOfBottomFace: function(tetrahedronGeometry) {
-			
-				let centroidOfBottomFace = {};
-				centroidOfBottomFace.x = (tetrahedronGeometry.vertices[0].x + tetrahedronGeometry.vertices[1].x + tetrahedronGeometry.vertices[3].x) / 3;
-				centroidOfBottomFace.y = (tetrahedronGeometry.vertices[0].y + tetrahedronGeometry.vertices[1].y + tetrahedronGeometry.vertices[3].y) / 3;
-				centroidOfBottomFace.z = (tetrahedronGeometry.vertices[0].z + tetrahedronGeometry.vertices[1].z + tetrahedronGeometry.vertices[3].z) / 3;
-				
-				return centroidOfBottomFace;
 			},
 			
 			isRightTurn: function(startingPoint, turningPoint, endingPoint) { // This might only work if vectors are flat on the ground since I am using y-component to determine sign
@@ -155,10 +176,6 @@
 			rotatePointAboutLine: function(pt, axisPt1, axisPt2, angle) {
 			
 				let self = this;
-				
-				// uncomment to visualize endpoints of rotation axis
-				// self.showPoint(axisPt1, new THREE.Color('red'));
-				// self.showPoint(axisPt2, new THREE.Color('red'));
 				
 				let u = new THREE.Vector3(0, 0, 0), rotation1 = new THREE.Vector3(0, 0, 0), rotation2 = new THREE.Vector3(0, 0, 0);
 				let d = 0.0;
@@ -229,14 +246,14 @@
 				return geometry;
 			},
 
-			setUpScene: function(scene, renderer) {
+			setUpScene: function() {
 
 				scene = new THREE.Scene();
 				scene.background = new THREE.Color(0xf0f0f0);
 	
 				if (gfx.appSettings.axesHelper.activateAxesHelper) {
 	
-					gfx.activateAxesHelper(scene);
+					gfx.activateAxesHelper();
 				}
 				return scene;
 			},
@@ -253,16 +270,16 @@
 				return camera;
 			},
 
-			showPoints: function(geometry, scene, color, opacity) {
+			showPoints: function(geometry, color, opacity) {
 			
 				let self = this;
 				
 				for (let i = 0; i < geometry.vertices.length; i++) {
-					gfx.showPoint(geometry.vertices[i], scene, color, opacity);
+					gfx.showPoint(geometry.vertices[i], color, opacity);
 				}
 			},
 
-			showPoint: function(pt, scene, color, opacity) {
+			showPoint: function(pt, color, opacity) {
 				color = color || 0xff0000;
 				opacity = opacity || 1;
 				let dotGeometry = new THREE.Geometry();
@@ -280,14 +297,29 @@
 				return dot;
 			},
 
-			showVector: function(vector, origin, scene, color) {
+			showVector: function(vector, origin, color) {
 			
 				color = color || 0xff0000;
 				let arrowHelper = new THREE.ArrowHelper(vector, origin, vector.length(), color);
 				scene.add(arrowHelper);
 			},
 
-			drawLine: function(pt1, pt2, scene, color) {
+			/* 	Inputs: pt - point in space to label, in the form of object with x, y, and z properties; label - text content for label; color - optional */
+			labelPoint: function(pt, label, color) {
+				
+				let self = this;
+				if (gfx.appSettings.font.enable) {
+					color = color || 0xff0000;
+					let textGeometry = new THREE.TextGeometry(label, self.appSettings.font.fontStyle);
+					let textMaterial = new THREE.MeshBasicMaterial({ color: color });
+					let mesh = new THREE.Mesh(textGeometry, textMaterial);
+					textGeometry.rotateX(-Math.PI / 2);
+					textGeometry.translate(pt.x, pt.y, pt.z);
+					scene.add(mesh);
+				}
+			},
+
+			drawLine: function(pt1, pt2, color) {
 				
 				color = color || 0x0000ff;
 				
@@ -298,15 +330,7 @@
 				
 				let line = new THREE.Line(geometry, material);
 				scene.add(line);
-				return line;
 			},
-			
-			createLine: function(pt1, pt2) {
-				let geometry = new THREE.Geometry();
-				geometry.vertices.push(pt1);
-				geometry.vertices.push(pt2);
-				return geometry;
-			},	
 
 			getDistance: function(pt1, pt2) { // create point class?
 			
@@ -314,7 +338,7 @@
 				return Math.sqrt(squirt);
 			},
 
-			labelAxes: function(scene) {
+			labelAxes: function() {
 			
 				let self = this;
 				if (gfx.appSettings.font.enable) {
@@ -357,7 +381,7 @@
 				}, 250));
 			},
 
-			resetScene: function(scope, scene) {
+			resetScene: function(scope) {
 			
 				scope.settings.stepCount = 0;
 				
@@ -366,9 +390,9 @@
 					scene.remove(obj);
 				}
 				
-				gfx.addFloor(scene);
+				gfx.addFloor();
 				scope.addTetrahedron();
-				gfx.setUpLights(scene);
+				gfx.setUpLights();
 				gfx.setCameraLocation(camera, self.settings.defaultCameraLocation);
 			},
 
@@ -379,6 +403,7 @@
 				controls.dampingFactor = 0.05;
 				controls.zoomSpeed = 2;
 				controls.enablePan = !utils.mobile();
+				controls.panSpeed = 1.5;
 				controls.minDistance = 10;
 				controls.maxDistance = 800;
 				controls.maxPolarAngle = Math.PI / 2;
@@ -389,7 +414,7 @@
 				document.body.appendChild(stats.dom);
 			},
 
-			setUpLights: function(scene) {
+			setUpLights: function() {
 
 				let self = this;
 				let lights = [];
@@ -403,7 +428,7 @@
 				const light2 = new THREE.DirectionalLight(color, intensity);
 				light2.position.set(0, 2, -8);
 				scene.add(light2);
-				lights.push(light2);
+				lights.push(light2)
 				
 				if (gfx.appSettings.activateLightHelpers) {
 					gfx.activateLightHelpers(lights);
@@ -442,7 +467,7 @@
 				return result;
 			},
 			
-			getCentroid2D: function(geometry, scene) { // Calculating centroid of a tetrahedron: https://www.youtube.com/watch?v=Infxzuqd_F4
+			getCentroid2D: function(geometry) { // Calculating centroid of a tetrahedron: https://www.youtube.com/watch?v=Infxzuqd_F4
 			
 				let result = new THREE.Vector3();
 				let x = 0, y = 0, z = 0;
@@ -476,7 +501,7 @@
 				let angle = vector1.angleTo(vector2);
 				return angle;
 			}
-		};
+		}
 	})();
 	
 	module.exports = window.gfx;

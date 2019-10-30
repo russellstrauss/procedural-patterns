@@ -38,13 +38,13 @@ module.exports = function() {
 			
 			let self = this;
 			
-			scene = gfx.setUpScene(scene);
+			scene = gfx.setUpScene();
 			renderer = gfx.setUpRenderer(renderer);
 			camera = gfx.setUpCamera(camera);
 			controls = gfx.enableControls(controls, renderer, camera);
 			gfx.resizeRendererOnWindowResize(renderer, camera);
 			self.bindUIEvents();
-			gfx.setUpLights(scene);
+			gfx.setUpLights();
 			gfx.setCameraLocation(camera, self.settings.defaultCameraLocation);
 			
 			self.addGeometries();
@@ -70,7 +70,7 @@ module.exports = function() {
 			
 			let self = this;
 			
-			floor = gfx.addFloor(this.settings.floorSize, scene, this.settings.colors.worldColor, this.settings.colors.gridColor);
+			floor = gfx.addFloor(this.settings.floorSize, this.settings.colors.worldColor, this.settings.colors.gridColor);
 			
 			var texture = new THREE.TextureLoader().load( 'assets/img/flower.jpg' );
 			texture.minFilter = THREE.LinearFilter;
@@ -121,7 +121,7 @@ module.exports = function() {
 				new THREE.Vector3(0, 0, -15)
 			);
 			
-			gfx.showPoints(start, scene);
+			gfx.showPoints(start);
 			
 			let end =  new THREE.Geometry();
 			end.vertices.push(
@@ -143,7 +143,7 @@ module.exports = function() {
 					// multiply whole by linear interpolation
 					let interpolation = whole.length() * (i/steps);
 					let result = gfx.movePoint(item, whole.clone().setLength(interpolation));
-					gfx.showPoint(result, scene);
+					gfx.showPoint(result);
 				}
 				
 			});
@@ -151,7 +151,7 @@ module.exports = function() {
 			
 			
 			
-			gfx.showPoints(end, scene);
+			gfx.showPoints(end);
 		},
 
 		enableControls: function() {
