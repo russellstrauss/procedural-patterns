@@ -14,8 +14,9 @@ module.exports = function () {
   var black = new THREE.Color('black');
   var targetList = [];
   var frameCount = 0;
-  var dot;
-  var curvePoints = [];
+  var dot, logDot;
+  var curvePoints = [],
+      logCurve = [];
   return {
     settings: {
       defaultCameraLocation: {
@@ -46,21 +47,39 @@ module.exports = function () {
       gfx.setUpLights();
       gfx.setCameraLocation(camera, self.settings.defaultCameraLocation);
       self.addGeometries();
+      self.vectorInterpolation();
       var position;
 
       var animate = function animate() {
         requestAnimationFrame(animate);
         renderer.render(scene, camera);
         if (controls) controls.update();
-        position = curvePoints[frameCount * 10 % curvePoints.length]; // 10 is the speed
+        var speed = 10;
+        position = curvePoints[frameCount * speed % curvePoints.length]; // 10 is the speed
 
         dot.position.set(position.x, position.y, 0); //camera.position.set(position.x, position.y, 0); // must disable controls for it to work
 
+        position = logCurve[frameCount * speed % logCurve.length]; // 10 is the speed
+
+        logDot.position.set(position.x, position.y, 10);
         frameCount++;
       };
 
       animate();
     },
+    vectorInterpolation: function vectorInterpolation() {
+      var start = new THREE.Vector3(5, 1, 5);
+      var end = new THREE.Vector3(10, 1, 5);
+      var startOrigin = new THREE.Vector3(10, 0, -15);
+      var endOrigin = new THREE.Vector3(20, 0, -15);
+      gfx.showVector(start, startOrigin);
+      gfx.showVector(end, endOrigin);
+      var steps = 10;
+
+      for (var i = 0; i < steps; i++) {//let interpolant = gfx.createVector()
+      }
+    },
+    createCurve: function createCurve() {},
     addGeometries: function addGeometries() {
       var self = this;
       floor = gfx.addFloor(this.settings.floorSize, this.settings.colors.worldColor, this.settings.colors.gridColor);
@@ -98,29 +117,48 @@ module.exports = function () {
       dot = new THREE.Points(dotGeometry, dotMaterial);
       scene.add(dot);
       var splineObject = new THREE.Line(geometry, material);
-      scene.add(splineObject);
-      dot.position.set(curve.getPoint(.5).x, splineObject.position.y, splineObject.position.z); // Affine transformations
+      scene.add(splineObject); //dot.position.set(curve.getPoint(.5).x, splineObject.position.y, splineObject.position.z);
 
-      var start = new THREE.Geometry();
-      start.vertices.push(new THREE.Vector3(0, 0, 0), new THREE.Vector3(2, 0, -5), new THREE.Vector3(2, 0, -10), new THREE.Vector3(0, 0, -15));
-      gfx.showPoints(start);
-      var end = new THREE.Geometry();
-      end.vertices.push(new THREE.Vector3(-30, 0, 0), new THREE.Vector3(-20, 0, -5), new THREE.Vector3(-15, 0, -10), new THREE.Vector3(-30, 0, -15));
-      var steps = 10;
-      var interpolations = [];
-      start.vertices.forEach(function (item, index) {
-        console.log(start.vertices[index], end.vertices[index]);
-        var whole = gfx.createVector(start.vertices[index], end.vertices[index]);
+      for (var _i = 1; _i < pointCount * curveSteps + 1; _i += curveSteps) {
+        logCurve.push(new THREE.Vector3(_i, 2 * Math.log(_i), 0));
+      }
 
-        for (var _i = 0; _i < steps; _i++) {
-          // multiply whole by linear interpolation
-          var interpolation = whole.length() * (_i / steps);
-
-          var result = gfx.movePoint(item, whole.clone().setLength(interpolation));
-          gfx.showPoint(result);
-        }
-      });
-      gfx.showPoints(end);
+      var logSplineCurve = new THREE.SplineCurve(logCurve);
+      points = logSplineCurve.getPoints(pointCount);
+      geometry = new THREE.BufferGeometry().setFromPoints(points);
+      var logSpline = new THREE.Line(geometry, material);
+      scene.add(logSpline);
+      logSpline.translateOnAxis(new THREE.Vector3(0, 0, 1), 10);
+      logDot = dot.clone();
+      scene.add(logDot);
+      logDot.position.set(logSplineCurve.getPoint(.5).x, logSpline.position.y, logSpline.position.z); // Affine transformations
+      // let start =  new THREE.Geometry();
+      // start.vertices.push(
+      // 	new THREE.Vector3(0, 0, 0),
+      // 	new THREE.Vector3(2, 0, -5),
+      // 	new THREE.Vector3(2, 0, -10),
+      // 	new THREE.Vector3(0, 0, -15)
+      // );
+      // //gfx.showPoints(start);
+      // let end =  new THREE.Geometry();
+      // end.vertices.push(
+      // 	new THREE.Vector3(-30, 0, 0),
+      // 	new THREE.Vector3(-20, 0, -5),
+      // 	new THREE.Vector3(-15, 0, -10),
+      // 	new THREE.Vector3(-30, 0, -15)
+      // );
+      // let steps = 10;
+      // let interpolations = [];
+      // start.vertices.forEach(function(item, index) {
+      // 	let whole = gfx.createVector(start.vertices[index], end.vertices[index]);
+      // 	for (let i = 0; i < steps; i++) {
+      // 		// multiply whole by linear interpolation
+      // 		let interpolation = whole.length() * (i/steps);
+      // 		let result = gfx.movePoint(item, whole.clone().setLength(interpolation));
+      // 		//gfx.showPoint(result);
+      // 	}
+      // });
+      //gfx.showPoints(end);
     },
     enableControls: function enableControls() {
       controls = new THREE.OrbitControls(camera, renderer.domElement);
@@ -182,23 +220,6 @@ module.exports = function () {
           renderer.setSize(window.innerWidth, window.innerHeight);
         }
       }, 250));
-    },
-    labelPoint: function labelPoint(pt, label, scene, color, font) {
-      font = font || this.settings.font;
-      var self = this;
-      var textCenterOffset = font.fontStyle.size / 2;
-
-      if (this.settings.font.enable) {
-        color = color || 0xff0000;
-        var textGeometry = new THREE.TextGeometry(label, font.fontStyle);
-        textGeometry.rotateX(-Math.PI / 2);
-        textGeometry.translate(pt.x - textCenterOffset, pt.y, pt.z + textCenterOffset);
-        var textMaterial = new THREE.MeshBasicMaterial({
-          color: color
-        });
-        var mesh = new THREE.Mesh(textGeometry, textMaterial);
-        scene.add(mesh);
-      }
     }
   };
 };
@@ -207,6 +228,7 @@ module.exports = function () {
 "use strict";
 
 module.exports = function () {
+  var scene;
   return {
     settings: {},
     init: function init() {

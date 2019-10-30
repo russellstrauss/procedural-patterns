@@ -8,8 +8,8 @@ module.exports = function() {
 	var black = new THREE.Color('black');
 	var targetList = [];
 	var frameCount = 0;
-	var dot;
-	var curvePoints = [];
+	var dot, logDot;
+	var curvePoints = [], logCurve = [];
 	
 	return {
 		
@@ -48,6 +48,7 @@ module.exports = function() {
 			gfx.setCameraLocation(camera, self.settings.defaultCameraLocation);
 			
 			self.addGeometries();
+			self.vectorInterpolation();
 			
 			var position;
 			var animate = function() {
@@ -56,14 +57,41 @@ module.exports = function() {
 				renderer.render(scene, camera);
 				if (controls) controls.update();
 				
-				position = curvePoints[(frameCount * 10) % curvePoints.length]; // 10 is the speed
+				let speed = 10;
+				
+				position = curvePoints[(frameCount * speed) % curvePoints.length]; // 10 is the speed
 				dot.position.set(position.x, position.y, 0);
 				//camera.position.set(position.x, position.y, 0); // must disable controls for it to work
+				
+				position = logCurve[(frameCount * speed) % logCurve.length]; // 10 is the speed
+				logDot.position.set(position.x, position.y, 10);
 				
 				frameCount++;
 			};
 			
 			animate();
+		},
+		
+		vectorInterpolation: function() {
+			
+			let start = new THREE.Vector3(5, 1, 5);
+			let end = new THREE.Vector3(10, 1, 5);
+			
+			let startOrigin = new THREE.Vector3(10, 0, -15);
+			let endOrigin = new THREE.Vector3(20, 0, -15);
+			
+			gfx.showVector(start, startOrigin);
+			gfx.showVector(end, endOrigin);
+			
+			let steps = 10;
+			for (let i = 0; i < steps; i++) {
+				
+				//let interpolant = gfx.createVector()
+			}
+		},
+		
+		createCurve: function() {
+			
 		},
 		
 		addGeometries: function() {
@@ -79,6 +107,8 @@ module.exports = function() {
 			var geometry = new THREE.BoxGeometry(10, .01, 10);
 			var cube = new THREE.Mesh(geometry, material);
 			//scene.add(cube);
+			
+			
 			
 			let curveSteps = .01;
 			let pointCount = 2000;
@@ -106,52 +136,64 @@ module.exports = function() {
 			
 			var splineObject = new THREE.Line(geometry, material);
 			scene.add(splineObject);
+
+			//dot.position.set(curve.getPoint(.5).x, splineObject.position.y, splineObject.position.z);
 			
-			dot.position.set(curve.getPoint(.5).x, splineObject.position.y, splineObject.position.z);
 			
-			
-			
+			for (let i = 1; i < (pointCount * curveSteps) + 1; i += curveSteps) {
+
+				logCurve.push(new THREE.Vector3(i, 2 * Math.log(i), 0));
+			}
+			var logSplineCurve = new THREE.SplineCurve(logCurve);
+			points = logSplineCurve.getPoints(pointCount);
+			geometry = new THREE.BufferGeometry().setFromPoints( points );
+			var logSpline = new THREE.Line(geometry, material);
+			scene.add(logSpline);
+			logSpline.translateOnAxis(new THREE.Vector3(0, 0, 1), 10);
+			logDot = dot.clone();
+			scene.add(logDot);
+			logDot.position.set(logSplineCurve.getPoint(.5).x, logSpline.position.y, logSpline.position.z);
 			
 			// Affine transformations
-			let start =  new THREE.Geometry();
-			start.vertices.push(
-				new THREE.Vector3(0, 0, 0),
-				new THREE.Vector3(2, 0, -5),
-				new THREE.Vector3(2, 0, -10),
-				new THREE.Vector3(0, 0, -15)
-			);
+			// let start =  new THREE.Geometry();
+			// start.vertices.push(
+			// 	new THREE.Vector3(0, 0, 0),
+			// 	new THREE.Vector3(2, 0, -5),
+			// 	new THREE.Vector3(2, 0, -10),
+			// 	new THREE.Vector3(0, 0, -15)
+			// );
 			
-			gfx.showPoints(start);
+			// //gfx.showPoints(start);
 			
-			let end =  new THREE.Geometry();
-			end.vertices.push(
-				new THREE.Vector3(-30, 0, 0),
-				new THREE.Vector3(-20, 0, -5),
-				new THREE.Vector3(-15, 0, -10),
-				new THREE.Vector3(-30, 0, -15)
-			);
+			// let end =  new THREE.Geometry();
+			// end.vertices.push(
+			// 	new THREE.Vector3(-30, 0, 0),
+			// 	new THREE.Vector3(-20, 0, -5),
+			// 	new THREE.Vector3(-15, 0, -10),
+			// 	new THREE.Vector3(-30, 0, -15)
+			// );
 			
-			let steps = 10;
-			let interpolations = [];
+			// let steps = 10;
+			// let interpolations = [];
 			
-			start.vertices.forEach(function(item, index) {
-				console.log(start.vertices[index], end.vertices[index]);
-				let whole = gfx.createVector(start.vertices[index], end.vertices[index]);
+			// start.vertices.forEach(function(item, index) {
 				
-				for (let i = 0; i < steps; i++) {
+			// 	let whole = gfx.createVector(start.vertices[index], end.vertices[index]);
+				
+			// 	for (let i = 0; i < steps; i++) {
 					
-					// multiply whole by linear interpolation
-					let interpolation = whole.length() * (i/steps);
-					let result = gfx.movePoint(item, whole.clone().setLength(interpolation));
-					gfx.showPoint(result);
-				}
+			// 		// multiply whole by linear interpolation
+			// 		let interpolation = whole.length() * (i/steps);
+			// 		let result = gfx.movePoint(item, whole.clone().setLength(interpolation));
+			// 		//gfx.showPoint(result);
+			// 	}
 				
-			});
+			// });
 			
 			
 			
 			
-			gfx.showPoints(end);
+			//gfx.showPoints(end);
 		},
 
 		enableControls: function() {
@@ -228,25 +270,6 @@ module.exports = function() {
 					renderer.setSize(window.innerWidth, window.innerHeight);
 				}
 			}, 250));
-		},
-		
-		labelPoint: function(pt, label, scene, color, font) {
-			
-			font = font || this.settings.font;
-			
-			let self = this;
-			
-			let textCenterOffset = font.fontStyle.size / 2;
-			if (this.settings.font.enable) {
-				color = color || 0xff0000;
-				let textGeometry = new THREE.TextGeometry(label, font.fontStyle);
-				textGeometry.rotateX(-Math.PI / 2);
-				textGeometry.translate(pt.x - textCenterOffset, pt.y, pt.z + textCenterOffset);
-				let textMaterial = new THREE.MeshBasicMaterial({ color: color });
-				let mesh = new THREE.Mesh(textGeometry, textMaterial);
-
-				scene.add(mesh);
-			}
 		}
 	};
 };
