@@ -68,12 +68,48 @@ module.exports = function () {
       animate();
     },
     vectorInterpolation: function vectorInterpolation() {
-      var start = new THREE.Vector3(5, 1, 5);
-      var end = new THREE.Vector3(10, 1, 5);
+      var start = new THREE.Vector3(0, 0, -10);
+      var end = new THREE.Vector3(2, 0, -3);
       var startOrigin = new THREE.Vector3(10, 0, -15);
       var endOrigin = new THREE.Vector3(20, 0, -15);
       gfx.showVector(start, startOrigin);
       gfx.showVector(end, endOrigin);
+      var center = new THREE.Geometry(); // get centroid for camera orientation
+
+      center.vertices.push(startOrigin, endOrigin, gfx.movePoint(startOrigin, start), gfx.movePoint(endOrigin, end));
+      center = gfx.getCentroid(center);
+      controls.target.set(center.x, center.y, center.z);
+      var newCameraPos = gfx.movePoint(center, new THREE.Vector3(0, 5, 0));
+      camera.position.set(newCameraPos.x, newCameraPos.y, newCameraPos.z);
+      controls.update();
+      var A = startOrigin;
+      var B = gfx.movePoint(startOrigin, start);
+      var C = endOrigin;
+      var D = gfx.movePoint(endOrigin, end);
+      var BD = gfx.createVector(B, D);
+      var AC = gfx.createVector(A, C);
+      var Dprime = gfx.movePoint(startOrigin, gfx.createVector(endOrigin, gfx.movePoint(endOrigin, end)));
+      var BDprime = gfx.createVector(B, Dprime);
+      var ADprime = gfx.createVector(endOrigin, gfx.movePoint(endOrigin, end));
+      gfx.showVector(ADprime, A, 0x00ff00);
+      gfx.showVector(BDprime, B, 0x00ff00);
+      gfx.showVector(BD, B, new THREE.Color('purple'));
+      gfx.showVector(AC, A, new THREE.Color('purple'));
+      gfx.labelPoint(A, 'A');
+      gfx.labelPoint(B, 'B');
+      gfx.labelPoint(C, 'C');
+      gfx.labelPoint(D, 'D');
+      gfx.labelPoint(Dprime, 'D\'', 0x00ff00);
+      var beta = gfx.getAngleBetweenVectors(BD, BDprime);
+      var rotationAxis = BD.clone().cross(BDprime.clone()).normalize();
+      var BArotated = gfx.createVector(B, A).applyAxisAngle(rotationAxis, beta).setLength(BD.length() / BDprime.length());
+      gfx.showVector(BArotated, B, new THREE.Color('orange'));
+      var F = gfx.movePoint(B, BArotated);
+      gfx.showPoint(F, new THREE.Color('black'));
+      gfx.labelPoint(new THREE.Vector3(F.x, F.y + .1, F.z), 'F', new THREE.Color('black'));
+      var totalAngle = gfx.calculateAngle(A, F, C);
+      gfx.showVector(gfx.createVector(F, A), F, new THREE.Color('black'));
+      gfx.showVector(gfx.createVector(F, C), F, new THREE.Color('black'));
       var steps = 10;
 
       for (var i = 0; i < steps; i++) {//let interpolant = gfx.createVector()
@@ -114,10 +150,10 @@ module.exports = function () {
         opacity: 1,
         transparent: true
       });
-      dot = new THREE.Points(dotGeometry, dotMaterial);
-      scene.add(dot);
-      var splineObject = new THREE.Line(geometry, material);
-      scene.add(splineObject); //dot.position.set(curve.getPoint(.5).x, splineObject.position.y, splineObject.position.z);
+      dot = new THREE.Points(dotGeometry, dotMaterial); //scene.add(dot);
+
+      var splineObject = new THREE.Line(geometry, material); //scene.add(splineObject);
+      //dot.position.set(curve.getPoint(.5).x, splineObject.position.y, splineObject.position.z);
 
       for (var _i = 1; _i < pointCount * curveSteps + 1; _i += curveSteps) {
         logCurve.push(new THREE.Vector3(_i, 2 * Math.log(_i), 0));
@@ -126,11 +162,11 @@ module.exports = function () {
       var logSplineCurve = new THREE.SplineCurve(logCurve);
       points = logSplineCurve.getPoints(pointCount);
       geometry = new THREE.BufferGeometry().setFromPoints(points);
-      var logSpline = new THREE.Line(geometry, material);
-      scene.add(logSpline);
+      var logSpline = new THREE.Line(geometry, material); //scene.add(logSpline);
+
       logSpline.translateOnAxis(new THREE.Vector3(0, 0, 1), 10);
-      logDot = dot.clone();
-      scene.add(logDot);
+      logDot = dot.clone(); //scene.add(logDot);
+
       logDot.position.set(logSplineCurve.getPoint(.5).x, logSpline.position.y, logSpline.position.z); // Affine transformations
       // let start =  new THREE.Geometry();
       // start.vertices.push(
@@ -159,18 +195,6 @@ module.exports = function () {
       // 	}
       // });
       //gfx.showPoints(end);
-    },
-    enableControls: function enableControls() {
-      controls = new THREE.OrbitControls(camera, renderer.domElement);
-      controls.target.set(0, 0, 0);
-      controls.enableDamping = true; // an animation loop is required when either damping or auto-rotation are enabled
-
-      controls.dampingFactor = 0.05;
-      controls.zoomSpeed = 6;
-      controls.enablePan = !utils.mobile();
-      controls.minDistance = 0;
-      controls.maxDistance = 200;
-      controls.maxPolarAngle = Math.PI / 2;
     },
     bindUIEvents: function bindUIEvents() {
       var self = this;
@@ -228,7 +252,6 @@ module.exports = function () {
 "use strict";
 
 module.exports = function () {
-  var scene;
   return {
     settings: {},
     init: function init() {
@@ -263,7 +286,7 @@ module.exports = function () {
           enable: true,
           fontStyle: {
             font: null,
-            size: 2,
+            size: .25,
             height: 0,
             curveSegments: 1
           }
@@ -628,7 +651,7 @@ module.exports = function () {
         triangleGeometry.computeFaceNormals();
         return triangleGeometry;
       },
-      getCentroid3D: function getCentroid3D(geometry) {
+      getCentroid: function getCentroid(geometry) {
         // Calculating centroid of a tetrahedron: https://www.youtube.com/watch?v=Infxzuqd_F4
         var result = new THREE.Vector3();
         var x = 0,
@@ -646,29 +669,19 @@ module.exports = function () {
         result.z = z / 4;
         return result;
       },
-      getCentroid2D: function getCentroid2D(geometry) {
-        // Calculating centroid of a tetrahedron: https://www.youtube.com/watch?v=Infxzuqd_F4
-        var result = new THREE.Vector3();
-        var x = 0,
-            y = 0,
-            z = 0;
-
-        for (var i = 0; i < geometry.vertices.length; i++) {
-          x += geometry.vertices[i].x;
-          y += geometry.vertices[i].y;
-          z += geometry.vertices[i].z;
-        }
-
-        result.x = x / 3;
-        result.y = y / 3;
-        result.z = z / 3;
-        return result;
-      },
       getAngleBetweenVectors: function getAngleBetweenVectors(vector1, vector2) {
         var dot = vector1.dot(vector2);
         var length1 = vector1.length();
         var length2 = vector2.length();
-        var angle = Math.acos(dot / (length1 * length2));
+        var angle = 0;
+
+        if (length1 * length2 === 0) {
+          // divide by zero case
+          angle = Math.acos(0);
+        } else {
+          angle = Math.acos(dot / (length1 * length2));
+        }
+
         return angle;
       },
       calculateAngle: function calculateAngle(endpoint1, endpoint2, vertex) {

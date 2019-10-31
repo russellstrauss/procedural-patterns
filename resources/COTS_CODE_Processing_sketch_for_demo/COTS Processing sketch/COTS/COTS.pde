@@ -38,7 +38,7 @@ PFont bigFont; // for showing large labels at corner
 //**************************** initialization ****************************
 void setup()               // executed once at the begining LatticeImage
   {
-  size(900, 900, P2D);            // window size
+  size(1200, 1400, P2D);            // window size
   smooth();                  // turn on antialiasing
   P.declare(); // declares all points in P. MUST BE DONE BEFORE ADDING POINTS 
   P.loadPts("data/pts");  // loads points form file saved with this program

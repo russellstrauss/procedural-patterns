@@ -17,7 +17,7 @@
 					enable: true,
 					fontStyle: {
 						font: null,
-						size: 2,
+						size: .25,
 						height: 0,
 						curveSegments: 1
 					}
@@ -449,7 +449,7 @@
 				return triangleGeometry;
 			},
 
-			getCentroid3D: function(geometry) { // Calculating centroid of a tetrahedron: https://www.youtube.com/watch?v=Infxzuqd_F4
+			getCentroid: function(geometry) { // Calculating centroid of a tetrahedron: https://www.youtube.com/watch?v=Infxzuqd_F4
 			
 				let result = new THREE.Vector3();
 				let x = 0, y = 0, z = 0;
@@ -466,31 +466,20 @@
 				result.z = z / 4;
 				return result;
 			},
-			
-			getCentroid2D: function(geometry) { // Calculating centroid of a tetrahedron: https://www.youtube.com/watch?v=Infxzuqd_F4
-			
-				let result = new THREE.Vector3();
-				let x = 0, y = 0, z = 0;
-				
-				for (let i = 0; i < geometry.vertices.length; i++) {
-					
-					x += geometry.vertices[i].x;
-					y += geometry.vertices[i].y;
-					z += geometry.vertices[i].z;
-				}
-				
-				result.x = x / 3;
-				result.y = y / 3;
-				result.z = z / 3;
-				return result;
-			},
 
 			getAngleBetweenVectors: function(vector1, vector2) {
-
+				
 				let dot = vector1.dot(vector2);
 				let length1 = vector1.length();
-				let length2 = vector2.length();			
-				let angle = Math.acos(dot / (length1 * length2));
+				let length2 = vector2.length();
+				let angle = 0;
+				if (length1 * length2 === 0) { // divide by zero case
+					angle = Math.acos(0);
+				}
+				else {
+					angle = Math.acos(dot / (length1 * length2));
+				}
+				
 				return angle;
 			},
 			
@@ -498,6 +487,7 @@
 
 				let vector1 = new THREE.Vector3(endpoint1.x - vertex.x, endpoint1.y - vertex.y, endpoint1.z - vertex.z);
 				let vector2 = new THREE.Vector3(endpoint2.x - vertex.x, endpoint2.y - vertex.y, endpoint2.z - vertex.z);
+				
 				let angle = vector1.angleTo(vector2);
 				return angle;
 			}

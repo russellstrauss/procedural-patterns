@@ -66,6 +66,7 @@ module.exports = function() {
 				position = logCurve[(frameCount * speed) % logCurve.length]; // 10 is the speed
 				logDot.position.set(position.x, position.y, 10);
 				
+				
 				frameCount++;
 			};
 			
@@ -74,14 +75,71 @@ module.exports = function() {
 		
 		vectorInterpolation: function() {
 			
-			let start = new THREE.Vector3(5, 1, 5);
-			let end = new THREE.Vector3(10, 1, 5);
+			let start = new THREE.Vector3(0, 0, -10);
+			let end = new THREE.Vector3(2, 0, -3);
 			
 			let startOrigin = new THREE.Vector3(10, 0, -15);
 			let endOrigin = new THREE.Vector3(20, 0, -15);
 			
 			gfx.showVector(start, startOrigin);
 			gfx.showVector(end, endOrigin);
+			
+			let center = new THREE.Geometry(); // get centroid for camera orientation
+			center.vertices.push(startOrigin, endOrigin, gfx.movePoint(startOrigin, start), gfx.movePoint(endOrigin, end));
+			center = gfx.getCentroid(center);
+			
+			controls.target.set(center.x, center.y, center.z);
+			let newCameraPos = gfx.movePoint(center, new THREE.Vector3(0, 5, 0));
+			camera.position.set(newCameraPos.x, newCameraPos.y, newCameraPos.z);
+			controls.update();
+			
+			
+			
+			let A = startOrigin;
+			let B = gfx.movePoint(startOrigin, start);
+			let C = endOrigin;
+			let D = gfx.movePoint(endOrigin, end);
+			let BD = gfx.createVector(B, D);
+			let AC = gfx.createVector(A, C);
+			let Dprime = gfx.movePoint(startOrigin, gfx.createVector(endOrigin, gfx.movePoint(endOrigin, end)));
+			let BDprime = gfx.createVector(B, Dprime);
+			let ADprime = gfx.createVector(endOrigin, gfx.movePoint(endOrigin, end));
+			
+			gfx.showVector(ADprime, A, 0x00ff00);
+			gfx.showVector(BDprime, B, 0x00ff00);
+			gfx.showVector(BD, B, new THREE.Color('purple'));
+			gfx.showVector(AC, A, new THREE.Color('purple'));
+			
+			gfx.labelPoint(A, 'A');
+			gfx.labelPoint(B, 'B');
+			gfx.labelPoint(C, 'C');
+			gfx.labelPoint(D, 'D');
+			gfx.labelPoint(Dprime, 'D\'', 0x00ff00);
+			
+			let beta = gfx.getAngleBetweenVectors(BD, BDprime);
+			let rotationAxis = BD.clone().cross(BDprime.clone()).normalize();
+			let BArotated = gfx.createVector(B, A).applyAxisAngle(rotationAxis, beta).setLength(BD.length()/BDprime.length());
+
+			
+			
+			
+			
+			
+			gfx.showVector(BArotated, B, new THREE.Color('orange'));
+			
+			let F = gfx.movePoint(B, BArotated);
+			gfx.showPoint(F, new  THREE.Color('black'));
+			gfx.labelPoint(new THREE.Vector3(F.x, F.y + .1, F.z), 'F', new THREE.Color('black'));
+			
+			let totalAngle = gfx.calculateAngle(A, F, C);
+			
+			gfx.showVector(gfx.createVector(F, A), F, new THREE.Color('black'));
+			gfx.showVector(gfx.createVector(F, C), F, new THREE.Color('black'));
+			
+			
+			
+			
+			
 			
 			let steps = 10;
 			for (let i = 0; i < steps; i++) {
@@ -132,10 +190,10 @@ module.exports = function() {
 				transparent: true
 			});
 			dot = new THREE.Points(dotGeometry, dotMaterial);
-			scene.add(dot);
+			//scene.add(dot);
 			
 			var splineObject = new THREE.Line(geometry, material);
-			scene.add(splineObject);
+			//scene.add(splineObject);
 
 			//dot.position.set(curve.getPoint(.5).x, splineObject.position.y, splineObject.position.z);
 			
@@ -148,10 +206,10 @@ module.exports = function() {
 			points = logSplineCurve.getPoints(pointCount);
 			geometry = new THREE.BufferGeometry().setFromPoints( points );
 			var logSpline = new THREE.Line(geometry, material);
-			scene.add(logSpline);
+			//scene.add(logSpline);
 			logSpline.translateOnAxis(new THREE.Vector3(0, 0, 1), 10);
 			logDot = dot.clone();
-			scene.add(logDot);
+			//scene.add(logDot);
 			logDot.position.set(logSplineCurve.getPoint(.5).x, logSpline.position.y, logSpline.position.z);
 			
 			// Affine transformations
@@ -194,18 +252,6 @@ module.exports = function() {
 			
 			
 			//gfx.showPoints(end);
-		},
-
-		enableControls: function() {
-			controls = new THREE.OrbitControls(camera, renderer.domElement);
-			controls.target.set(0, 0, 0);
-			controls.enableDamping = true; // an animation loop is required when either damping or auto-rotation are enabled
-			controls.dampingFactor = 0.05;
-			controls.zoomSpeed = 6;
-			controls.enablePan = !utils.mobile();
-			controls.minDistance = 0;
-			controls.maxDistance = 200;
-			controls.maxPolarAngle = Math.PI / 2;
 		},
 		
 		bindUIEvents: function() {
