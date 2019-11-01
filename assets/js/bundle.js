@@ -35,6 +35,7 @@ module.exports = function () {
     init: function init() {
       var self = this;
       self.loadAssets();
+      self.labelCoordinateAxes();
     },
     begin: function begin() {
       var self = this;
@@ -67,9 +68,15 @@ module.exports = function () {
 
       animate();
     },
+    labelCoordinateAxes: function labelCoordinateAxes() {//gfx.labelPoint(new THREE.Vector3(F.x, F.y + .1, F.z), 'F', new THREE.Color('black'));
+      // gfx.labelPoint(new THREE.Vector3(-this.settings.floorSize/2 - 5, 0, 0), '-X', black);
+      // gfx.labelPoint(new THREE.Vector3(this.settings.floorSize/2 + 1.5, 0, 0), '+X', black);
+      // gfx.labelPoint(new THREE.Vector3(0, 0, -this.settings.floorSize/2 - 2), '-Z', black);
+      // gfx.labelPoint(new THREE.Vector3(0, 0, this.settings.floorSize/2 + 4.5), '+Z', black);
+    },
     vectorInterpolation: function vectorInterpolation() {
       var start = new THREE.Vector3(0, 0, -10);
-      var end = new THREE.Vector3(2, 0, -3);
+      var end = new THREE.Vector3(10, 0, -15);
       var startOrigin = new THREE.Vector3(10, 0, -15);
       var endOrigin = new THREE.Vector3(20, 0, -15);
       gfx.showVector(start, startOrigin);
@@ -102,11 +109,16 @@ module.exports = function () {
       gfx.labelPoint(Dprime, 'D\'', 0x00ff00);
       var beta = gfx.getAngleBetweenVectors(BD, BDprime);
       var rotationAxis = BD.clone().cross(BDprime.clone()).normalize();
-      var BArotated = gfx.createVector(B, A).applyAxisAngle(rotationAxis, beta).setLength(BD.length() / BDprime.length());
+      var BArotated = gfx.createVector(B, A).applyAxisAngle(rotationAxis, beta).multiplyScalar(BD.length() / BDprime.length());
       gfx.showVector(BArotated, B, new THREE.Color('orange'));
       var F = gfx.movePoint(B, BArotated);
       gfx.showPoint(F, new THREE.Color('black'));
-      gfx.labelPoint(new THREE.Vector3(F.x, F.y + .1, F.z), 'F', new THREE.Color('black'));
+      gfx.labelPoint(new THREE.Vector3(F.x, F.y + .1, F.z), 'F', new THREE.Color('black')); //gfx.labelPoint(new THREE.Vector3(F.x, F.y + .1, F.z), 'F', new THREE.Color('black'));
+      // gfx.labelPoint(new THREE.Vector3(-this.settings.floorSize/2 - 5, 0, 0), '-X', black);
+      // gfx.labelPoint(new THREE.Vector3(this.settings.floorSize/2 + 1.5, 0, 0), '+X', black);
+      // gfx.labelPoint(new THREE.Vector3(0, 0, -this.settings.floorSize/2 - 2), '-Z', black);
+      // gfx.labelPoint(new THREE.Vector3(0, 0, this.settings.floorSize/2 + 4.5), '+Z', black);
+
       var totalAngle = gfx.calculateAngle(A, F, C);
       gfx.showVector(gfx.createVector(F, A), F, new THREE.Color('black'));
       gfx.showVector(gfx.createVector(F, C), F, new THREE.Color('black'));
@@ -286,7 +298,7 @@ module.exports = function () {
           enable: true,
           fontStyle: {
             font: null,
-            size: .25,
+            size: 2,
             height: 0,
             curveSegments: 1
           }

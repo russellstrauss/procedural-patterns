@@ -32,6 +32,7 @@ module.exports = function() {
 
 			let self = this;
 			self.loadAssets();
+			self.labelCoordinateAxes();
 		},
 		
 		begin: function() {
@@ -73,10 +74,18 @@ module.exports = function() {
 			animate();
 		},
 		
+		labelCoordinateAxes: function() {
+			//gfx.labelPoint(new THREE.Vector3(F.x, F.y + .1, F.z), 'F', new THREE.Color('black'));
+			// gfx.labelPoint(new THREE.Vector3(-this.settings.floorSize/2 - 5, 0, 0), '-X', black);
+			// gfx.labelPoint(new THREE.Vector3(this.settings.floorSize/2 + 1.5, 0, 0), '+X', black);
+			// gfx.labelPoint(new THREE.Vector3(0, 0, -this.settings.floorSize/2 - 2), '-Z', black);
+			// gfx.labelPoint(new THREE.Vector3(0, 0, this.settings.floorSize/2 + 4.5), '+Z', black);
+		},
+		
 		vectorInterpolation: function() {
 			
 			let start = new THREE.Vector3(0, 0, -10);
-			let end = new THREE.Vector3(2, 0, -3);
+			let end = new THREE.Vector3(10, 0, -15);
 			
 			let startOrigin = new THREE.Vector3(10, 0, -15);
 			let endOrigin = new THREE.Vector3(20, 0, -15);
@@ -118,7 +127,7 @@ module.exports = function() {
 			
 			let beta = gfx.getAngleBetweenVectors(BD, BDprime);
 			let rotationAxis = BD.clone().cross(BDprime.clone()).normalize();
-			let BArotated = gfx.createVector(B, A).applyAxisAngle(rotationAxis, beta).setLength(BD.length()/BDprime.length());
+			let BArotated = gfx.createVector(B, A).applyAxisAngle(rotationAxis, beta).multiplyScalar(BD.length()/BDprime.length());
 
 			
 			
@@ -130,6 +139,12 @@ module.exports = function() {
 			let F = gfx.movePoint(B, BArotated);
 			gfx.showPoint(F, new  THREE.Color('black'));
 			gfx.labelPoint(new THREE.Vector3(F.x, F.y + .1, F.z), 'F', new THREE.Color('black'));
+			
+			//gfx.labelPoint(new THREE.Vector3(F.x, F.y + .1, F.z), 'F', new THREE.Color('black'));
+			// gfx.labelPoint(new THREE.Vector3(-this.settings.floorSize/2 - 5, 0, 0), '-X', black);
+			// gfx.labelPoint(new THREE.Vector3(this.settings.floorSize/2 + 1.5, 0, 0), '+X', black);
+			// gfx.labelPoint(new THREE.Vector3(0, 0, -this.settings.floorSize/2 - 2), '-Z', black);
+			// gfx.labelPoint(new THREE.Vector3(0, 0, this.settings.floorSize/2 + 4.5), '+Z', black);
 			
 			let totalAngle = gfx.calculateAngle(A, F, C);
 			
@@ -211,6 +226,10 @@ module.exports = function() {
 			logDot = dot.clone();
 			//scene.add(logDot);
 			logDot.position.set(logSplineCurve.getPoint(.5).x, logSpline.position.y, logSpline.position.z);
+			
+			
+			
+			
 			
 			// Affine transformations
 			// let start =  new THREE.Geometry();

@@ -17,7 +17,7 @@
 					enable: true,
 					fontStyle: {
 						font: null,
-						size: .25,
+						size: 2,
 						height: 0,
 						curveSegments: 1
 					}
