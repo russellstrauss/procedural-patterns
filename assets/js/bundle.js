@@ -19,11 +19,6 @@ module.exports = function () {
       logCurve = [];
   return {
     settings: {
-      defaultCameraLocation: {
-        x: 20,
-        y: 20,
-        z: -30
-      },
       zBufferOffset: 0.01,
       colors: {
         worldColor: new THREE.Color('white'),
@@ -46,7 +41,10 @@ module.exports = function () {
       gfx.resizeRendererOnWindowResize(renderer, camera);
       self.bindUIEvents();
       gfx.setUpLights();
-      gfx.setCameraLocation(camera, self.settings.defaultCameraLocation);
+      gfx.labelPoint(new THREE.Vector3(-this.settings.floorSize / 2 - 5, 0, 0), '-X', black);
+      gfx.labelPoint(new THREE.Vector3(this.settings.floorSize / 2 + 1.5, 0, 0), '+X', black);
+      gfx.labelPoint(new THREE.Vector3(0, 0, -this.settings.floorSize / 2 - 2), '-Z', black);
+      gfx.labelPoint(new THREE.Vector3(0, 0, this.settings.floorSize / 2 + 4.5), '+Z', black);
       self.addGeometries();
       self.vectorInterpolation();
       var position;
@@ -58,8 +56,7 @@ module.exports = function () {
         var speed = 10;
         position = curvePoints[frameCount * speed % curvePoints.length]; // 10 is the speed
 
-        dot.position.set(position.x, position.y, 0); //camera.position.set(position.x, position.y, 0); // must disable controls for it to work
-
+        dot.position.set(position.x, position.y, 0);
         position = logCurve[frameCount * speed % logCurve.length]; // 10 is the speed
 
         logDot.position.set(position.x, position.y, 10);
@@ -68,11 +65,8 @@ module.exports = function () {
 
       animate();
     },
-    labelCoordinateAxes: function labelCoordinateAxes() {//gfx.labelPoint(new THREE.Vector3(F.x, F.y + .1, F.z), 'F', new THREE.Color('black'));
-      // gfx.labelPoint(new THREE.Vector3(-this.settings.floorSize/2 - 5, 0, 0), '-X', black);
-      // gfx.labelPoint(new THREE.Vector3(this.settings.floorSize/2 + 1.5, 0, 0), '+X', black);
-      // gfx.labelPoint(new THREE.Vector3(0, 0, -this.settings.floorSize/2 - 2), '-Z', black);
-      // gfx.labelPoint(new THREE.Vector3(0, 0, this.settings.floorSize/2 + 4.5), '+Z', black);
+    labelCoordinateAxes: function labelCoordinateAxes() {
+      var self = this;
     },
     vectorInterpolation: function vectorInterpolation() {
       var start = new THREE.Vector3(0, 0, -10);
@@ -86,8 +80,7 @@ module.exports = function () {
       center.vertices.push(startOrigin, endOrigin, gfx.movePoint(startOrigin, start), gfx.movePoint(endOrigin, end));
       center = gfx.getCentroid(center);
       controls.target.set(center.x, center.y, center.z);
-      var newCameraPos = gfx.movePoint(center, new THREE.Vector3(0, 5, 0));
-      camera.position.set(newCameraPos.x, newCameraPos.y, newCameraPos.z);
+      gfx.setCameraLocation(camera, gfx.movePoint(center, new THREE.Vector3(0, 30, 0)));
       controls.update();
       var A = startOrigin;
       var B = gfx.movePoint(startOrigin, start);
@@ -97,35 +90,47 @@ module.exports = function () {
       var AC = gfx.createVector(A, C);
       var Dprime = gfx.movePoint(startOrigin, gfx.createVector(endOrigin, gfx.movePoint(endOrigin, end)));
       var BDprime = gfx.createVector(B, Dprime);
-      var ADprime = gfx.createVector(endOrigin, gfx.movePoint(endOrigin, end));
-      gfx.showVector(ADprime, A, 0x00ff00);
-      gfx.showVector(BDprime, B, 0x00ff00);
-      gfx.showVector(BD, B, new THREE.Color('purple'));
-      gfx.showVector(AC, A, new THREE.Color('purple'));
+      var ADprime = gfx.createVector(endOrigin, gfx.movePoint(endOrigin, end)); // gfx.showVector(BD, B, new THREE.Color('purple'));
+      // gfx.showVector(AC, A, new THREE.Color('purple'));
+
       gfx.labelPoint(A, 'A');
       gfx.labelPoint(B, 'B');
       gfx.labelPoint(C, 'C');
       gfx.labelPoint(D, 'D');
-      gfx.labelPoint(Dprime, 'D\'', 0x00ff00);
       var beta = gfx.getAngleBetweenVectors(BD, BDprime);
       var rotationAxis = BD.clone().cross(BDprime.clone()).normalize();
       var BArotated = gfx.createVector(B, A).applyAxisAngle(rotationAxis, beta).multiplyScalar(BD.length() / BDprime.length());
-      gfx.showVector(BArotated, B, new THREE.Color('orange'));
       var F = gfx.movePoint(B, BArotated);
       gfx.showPoint(F, new THREE.Color('black'));
-      gfx.labelPoint(new THREE.Vector3(F.x, F.y + .1, F.z), 'F', new THREE.Color('black')); //gfx.labelPoint(new THREE.Vector3(F.x, F.y + .1, F.z), 'F', new THREE.Color('black'));
-      // gfx.labelPoint(new THREE.Vector3(-this.settings.floorSize/2 - 5, 0, 0), '-X', black);
-      // gfx.labelPoint(new THREE.Vector3(this.settings.floorSize/2 + 1.5, 0, 0), '+X', black);
-      // gfx.labelPoint(new THREE.Vector3(0, 0, -this.settings.floorSize/2 - 2), '-Z', black);
-      // gfx.labelPoint(new THREE.Vector3(0, 0, this.settings.floorSize/2 + 4.5), '+Z', black);
-
+      gfx.labelPoint(new THREE.Vector3(F.x, F.y + .1, F.z), 'F', new THREE.Color('black'));
+      var FA = gfx.createVector(F, A);
+      var FC = gfx.createVector(F, C);
+      var AFCnormal = FA.clone().cross(FC).normalize();
+      gfx.showVector(FA, F, new THREE.Color('black'));
+      gfx.showVector(FC, F, new THREE.Color('black'));
       var totalAngle = gfx.calculateAngle(A, F, C);
-      gfx.showVector(gfx.createVector(F, A), F, new THREE.Color('black'));
-      gfx.showVector(gfx.createVector(F, C), F, new THREE.Color('black'));
+      var AB = gfx.createVector(A, B);
+      var CD = gfx.createVector(C, D);
+      console.log(AB.length());
       var steps = 10;
 
-      for (var i = 0; i < steps; i++) {//let interpolant = gfx.createVector()
+      for (var i = 1; i < steps + 1; i++) {
+        var currentAngle = totalAngle / steps * i;
+        var a = gfx.getAngleBetweenVectors(AB, CD);
+        var CA2 = a / steps * i;
+        var m = CD.length() / AB.length();
+        var mi = m / steps * i;
+        var currentRatio = AB.clone().applyAxisAngle(rotationAxis, CA2).lerpVectors(AB, CD, i / steps);
+        var currentLength = AB.length() + m / steps * (i - 1);
+        rotationAxis = AFCnormal.clone();
+        var FstepVector = FA.clone().applyAxisAngle(rotationAxis, currentAngle);
+        gfx.showVector(FstepVector, F);
+        var startingPoint = gfx.movePoint(F, FstepVector);
+        gfx.showPoint(startingPoint);
+        gfx.showVector(currentRatio, startingPoint);
       }
+
+      console.log(CD.length());
     },
     createCurve: function createCurve() {},
     addGeometries: function addGeometries() {

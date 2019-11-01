@@ -14,11 +14,6 @@ module.exports = function() {
 	return {
 		
 		settings: {
-			defaultCameraLocation: {
-				x: 20,
-				y: 20,
-				z: -30
-			},
 			zBufferOffset: 0.01,
 			colors: {
 				worldColor: new THREE.Color('white'),
@@ -46,7 +41,11 @@ module.exports = function() {
 			gfx.resizeRendererOnWindowResize(renderer, camera);
 			self.bindUIEvents();
 			gfx.setUpLights();
-			gfx.setCameraLocation(camera, self.settings.defaultCameraLocation);
+			
+			gfx.labelPoint(new THREE.Vector3(-this.settings.floorSize/2 - 5, 0, 0), '-X', black);
+			gfx.labelPoint(new THREE.Vector3(this.settings.floorSize/2 + 1.5, 0, 0), '+X', black);
+			gfx.labelPoint(new THREE.Vector3(0, 0, -this.settings.floorSize/2 - 2), '-Z', black);
+			gfx.labelPoint(new THREE.Vector3(0, 0, this.settings.floorSize/2 + 4.5), '+Z', black);
 			
 			self.addGeometries();
 			self.vectorInterpolation();
@@ -59,14 +58,10 @@ module.exports = function() {
 				if (controls) controls.update();
 				
 				let speed = 10;
-				
 				position = curvePoints[(frameCount * speed) % curvePoints.length]; // 10 is the speed
 				dot.position.set(position.x, position.y, 0);
-				//camera.position.set(position.x, position.y, 0); // must disable controls for it to work
-				
 				position = logCurve[(frameCount * speed) % logCurve.length]; // 10 is the speed
 				logDot.position.set(position.x, position.y, 10);
-				
 				
 				frameCount++;
 			};
@@ -75,11 +70,9 @@ module.exports = function() {
 		},
 		
 		labelCoordinateAxes: function() {
-			//gfx.labelPoint(new THREE.Vector3(F.x, F.y + .1, F.z), 'F', new THREE.Color('black'));
-			// gfx.labelPoint(new THREE.Vector3(-this.settings.floorSize/2 - 5, 0, 0), '-X', black);
-			// gfx.labelPoint(new THREE.Vector3(this.settings.floorSize/2 + 1.5, 0, 0), '+X', black);
-			// gfx.labelPoint(new THREE.Vector3(0, 0, -this.settings.floorSize/2 - 2), '-Z', black);
-			// gfx.labelPoint(new THREE.Vector3(0, 0, this.settings.floorSize/2 + 4.5), '+Z', black);
+			
+			let self = this;
+			
 		},
 		
 		vectorInterpolation: function() {
@@ -98,8 +91,7 @@ module.exports = function() {
 			center = gfx.getCentroid(center);
 			
 			controls.target.set(center.x, center.y, center.z);
-			let newCameraPos = gfx.movePoint(center, new THREE.Vector3(0, 5, 0));
-			camera.position.set(newCameraPos.x, newCameraPos.y, newCameraPos.z);
+			gfx.setCameraLocation(camera, gfx.movePoint(center, new THREE.Vector3(0, 30, 0)));
 			controls.update();
 			
 			
@@ -113,17 +105,14 @@ module.exports = function() {
 			let Dprime = gfx.movePoint(startOrigin, gfx.createVector(endOrigin, gfx.movePoint(endOrigin, end)));
 			let BDprime = gfx.createVector(B, Dprime);
 			let ADprime = gfx.createVector(endOrigin, gfx.movePoint(endOrigin, end));
-			
-			gfx.showVector(ADprime, A, 0x00ff00);
-			gfx.showVector(BDprime, B, 0x00ff00);
-			gfx.showVector(BD, B, new THREE.Color('purple'));
-			gfx.showVector(AC, A, new THREE.Color('purple'));
+
+			// gfx.showVector(BD, B, new THREE.Color('purple'));
+			// gfx.showVector(AC, A, new THREE.Color('purple'));
 			
 			gfx.labelPoint(A, 'A');
 			gfx.labelPoint(B, 'B');
 			gfx.labelPoint(C, 'C');
 			gfx.labelPoint(D, 'D');
-			gfx.labelPoint(Dprime, 'D\'', 0x00ff00);
 			
 			let beta = gfx.getAngleBetweenVectors(BD, BDprime);
 			let rotationAxis = BD.clone().cross(BDprime.clone()).normalize();
@@ -132,35 +121,59 @@ module.exports = function() {
 			
 			
 			
-			
-			
-			gfx.showVector(BArotated, B, new THREE.Color('orange'));
-			
 			let F = gfx.movePoint(B, BArotated);
 			gfx.showPoint(F, new  THREE.Color('black'));
 			gfx.labelPoint(new THREE.Vector3(F.x, F.y + .1, F.z), 'F', new THREE.Color('black'));
 			
-			//gfx.labelPoint(new THREE.Vector3(F.x, F.y + .1, F.z), 'F', new THREE.Color('black'));
-			// gfx.labelPoint(new THREE.Vector3(-this.settings.floorSize/2 - 5, 0, 0), '-X', black);
-			// gfx.labelPoint(new THREE.Vector3(this.settings.floorSize/2 + 1.5, 0, 0), '+X', black);
-			// gfx.labelPoint(new THREE.Vector3(0, 0, -this.settings.floorSize/2 - 2), '-Z', black);
-			// gfx.labelPoint(new THREE.Vector3(0, 0, this.settings.floorSize/2 + 4.5), '+Z', black);
+			
+			
+			let FA = gfx.createVector(F, A);
+			let FC = gfx.createVector(F, C);
+			let AFCnormal = FA.clone().cross(FC).normalize();
+			gfx.showVector(FA, F, new THREE.Color('black'));
+			gfx.showVector(FC, F, new THREE.Color('black'));
+			
+			
 			
 			let totalAngle = gfx.calculateAngle(A, F, C);
 			
-			gfx.showVector(gfx.createVector(F, A), F, new THREE.Color('black'));
-			gfx.showVector(gfx.createVector(F, C), F, new THREE.Color('black'));
+			let AB = gfx.createVector(A, B);
+			let CD = gfx.createVector(C, D);
 			
-			
-			
-			
-			
+			console.log(AB.length());
 			
 			let steps = 10;
-			for (let i = 0; i < steps; i++) {
+			for (let i = 1; i < steps + 1; i++) {
 				
-				//let interpolant = gfx.createVector()
+				let currentAngle = totalAngle / steps * i;
+				
+				let a = gfx.getAngleBetweenVectors(AB, CD);
+				let CA2 = a / steps * i;
+				
+				let m = CD.length() / AB.length();
+				let mi = m / steps * i;
+				let currentRatio = AB.clone().applyAxisAngle(rotationAxis, CA2).lerpVectors(AB, CD, i/steps);
+				let currentLength = AB.length() + ( m / steps ) * (i - 1);
+				
+				rotationAxis = AFCnormal.clone();
+				let FstepVector = FA.clone().applyAxisAngle(rotationAxis, currentAngle);
+				
+				
+				
+				
+				gfx.showVector(FstepVector, F);
+				
+				let startingPoint = gfx.movePoint(F, FstepVector);
+				gfx.showPoint(startingPoint);
+				
+				
+				gfx.showVector(currentRatio, startingPoint);
+				
+				
+				
 			}
+			
+			console.log(CD.length());
 		},
 		
 		createCurve: function() {
