@@ -95,6 +95,17 @@ module.exports = function() {
 		
 		vectorInterpolation: function() {
 			
+			var texture = new THREE.TextureLoader().load( 'assets/img/flower.jpg' );
+			texture.minFilter = THREE.LinearFilter;
+			var material = new THREE.MeshBasicMaterial( { map: texture } );
+			
+			var geometry = new THREE.BoxGeometry(10, .01, 10);
+			var cube = new THREE.Mesh(geometry, material);
+			scene.add(cube);
+			cube.translateOnAxis(new THREE.Vector3(0, 0, -1), -10);
+			cube.rotateOnAxis(new THREE.Vector3(1, 0, 0), Math.PI / 2);
+			cube.translateOnAxis(new THREE.Vector3(0, 0, -1), 5);
+			
 			let start = new THREE.Vector3(-30, 0, -10);
 			let end = new THREE.Vector3(10, 0, -15);
 			
@@ -159,7 +170,7 @@ module.exports = function() {
 			let CD = gfx.createVector(C, D);
 						
 			let steps = 10;
-			for (let i = 1; i < steps + 1; i++) {
+			for (let i = 1; i < steps; i++) {
 				
 				let currentAngle = (totalAngle / steps) * i;				
 				
@@ -204,17 +215,6 @@ module.exports = function() {
 			
 			gfx.setCameraLocation(camera, new THREE.Vector3(0, 30, 30));
 			
-			var texture = new THREE.TextureLoader().load( 'assets/img/flower.jpg' );
-			texture.minFilter = THREE.LinearFilter;
-			var material = new THREE.MeshBasicMaterial( { map: texture } );
-			
-			var geometry = new THREE.BoxGeometry(10, .01, 10);
-			var cube = new THREE.Mesh(geometry, material);
-			scene.add(cube);
-			cube.translateOnAxis(new THREE.Vector3(0, 0, -1), 30);
-			cube.rotateOnAxis(new THREE.Vector3(1, 0, 0), Math.PI / 2);
-			cube.translateOnAxis(new THREE.Vector3(0, 0, -1), 5);
-			
 			
 			let curveSteps = .01;
 			let pointCount = 2000;
@@ -225,8 +225,8 @@ module.exports = function() {
 			
 			var curve = new THREE.SplineCurve(curvePoints);
 			var points = curve.getPoints(pointCount);
-			geometry = new THREE.BufferGeometry().setFromPoints( points );
-			material = new THREE.LineBasicMaterial( { color : 0xff0000 } );
+			var geometry = new THREE.BufferGeometry().setFromPoints( points );
+			var material = new THREE.LineBasicMaterial( { color : 0xff0000 } );
 			
 			let dotGeometry = new THREE.Geometry();
 			dotGeometry.vertices.push(new THREE.Vector3(0, 0, 0));

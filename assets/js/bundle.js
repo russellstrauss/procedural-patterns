@@ -101,6 +101,17 @@ module.exports = function () {
       animate();
     },
     vectorInterpolation: function vectorInterpolation() {
+      var texture = new THREE.TextureLoader().load('assets/img/flower.jpg');
+      texture.minFilter = THREE.LinearFilter;
+      var material = new THREE.MeshBasicMaterial({
+        map: texture
+      });
+      var geometry = new THREE.BoxGeometry(10, .01, 10);
+      var cube = new THREE.Mesh(geometry, material);
+      scene.add(cube);
+      cube.translateOnAxis(new THREE.Vector3(0, 0, -1), -10);
+      cube.rotateOnAxis(new THREE.Vector3(1, 0, 0), Math.PI / 2);
+      cube.translateOnAxis(new THREE.Vector3(0, 0, -1), 5);
       var start = new THREE.Vector3(-30, 0, -10);
       var end = new THREE.Vector3(10, 0, -15);
       var startOrigin = new THREE.Vector3(-40, 0, -15);
@@ -145,7 +156,7 @@ module.exports = function () {
       var CD = gfx.createVector(C, D);
       var steps = 10;
 
-      for (var i = 1; i < steps + 1; i++) {
+      for (var i = 1; i < steps; i++) {
         var currentAngle = totalAngle / steps * i;
         var a = gfx.getAngleBetweenVectors(AB, CD);
         var CA2 = a / steps * i;
@@ -171,17 +182,6 @@ module.exports = function () {
     addGeometries: function addGeometries() {
       var self = this;
       gfx.setCameraLocation(camera, new THREE.Vector3(0, 30, 30));
-      var texture = new THREE.TextureLoader().load('assets/img/flower.jpg');
-      texture.minFilter = THREE.LinearFilter;
-      var material = new THREE.MeshBasicMaterial({
-        map: texture
-      });
-      var geometry = new THREE.BoxGeometry(10, .01, 10);
-      var cube = new THREE.Mesh(geometry, material);
-      scene.add(cube);
-      cube.translateOnAxis(new THREE.Vector3(0, 0, -1), 30);
-      cube.rotateOnAxis(new THREE.Vector3(1, 0, 0), Math.PI / 2);
-      cube.translateOnAxis(new THREE.Vector3(0, 0, -1), 5);
       var curveSteps = .01;
       var pointCount = 2000;
       var height = 4;
@@ -192,8 +192,8 @@ module.exports = function () {
 
       var curve = new THREE.SplineCurve(curvePoints);
       var points = curve.getPoints(pointCount);
-      geometry = new THREE.BufferGeometry().setFromPoints(points);
-      material = new THREE.LineBasicMaterial({
+      var geometry = new THREE.BufferGeometry().setFromPoints(points);
+      var material = new THREE.LineBasicMaterial({
         color: 0xff0000
       });
       var dotGeometry = new THREE.Geometry();
