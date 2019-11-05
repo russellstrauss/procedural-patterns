@@ -22,7 +22,14 @@
 						curveSegments: 1
 					}
 				},
-				errorLogging: false
+				errorLogging: false,
+				camera: {
+					position: {
+						x: 0,
+						y: 2,
+						z: 0
+					}
+				}
 			},
 
 			activateAxesHelper: function() {
@@ -267,6 +274,7 @@
 
 			setUpCamera: function(camera) {
 				camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 1, 1000);
+				gfx.setCameraLocation(camera, this.appSettings.camera.position);
 				return camera;
 			},
 

@@ -11,6 +11,18 @@ module.exports = function () {
     opacity: 0.25,
     transparent: true
   });
+  var translucentMaterial = new THREE.MeshBasicMaterial({
+    color: new THREE.Color('#69D2E7'),
+    opacity: 0.01,
+    transparent: true
+  });
+  var blackMaterial = new THREE.MeshBasicMaterial({
+    color: new THREE.Color('black')
+  }),
+      whiteMaterial = new THREE.MeshBasicMaterial({
+    color: new THREE.Color('white')
+  });
+  var materials = [blackMaterial, whiteMaterial];
   var distinctColors = [new THREE.Color('#e6194b'), new THREE.Color('#3cb44b'), new THREE.Color('#ffe119'), new THREE.Color('#4363d8'), new THREE.Color('#f58231'), new THREE.Color('#911eb4'), new THREE.Color('#46f0f0'), new THREE.Color('#f032e6'), new THREE.Color('#bcf60c'), new THREE.Color('#fabebe'), new THREE.Color('#008080'), new THREE.Color('#e6beff'), new THREE.Color('#9a6324'), new THREE.Color('#fffac8'), new THREE.Color('#800000'), new THREE.Color('#aaffc3'), new THREE.Color('#808000'), new THREE.Color('#ffd8b1'), new THREE.Color('#000075'), new THREE.Color('#808080'), new THREE.Color('#ffffff'), new THREE.Color('#000000')];
   var black = new THREE.Color('black');
   var targetList = [];
@@ -20,9 +32,10 @@ module.exports = function () {
       logCurve = [],
       circleCurve = [];
   var boxes = [];
+  var cameraDirection = 1;
   return {
     settings: {
-      zBufferOffset: 0.01,
+      zBufferOffset: 1,
       colors: {
         worldColor: new THREE.Color('white'),
         gridColor: black,
@@ -33,7 +46,6 @@ module.exports = function () {
     init: function init() {
       var self = this;
       self.loadAssets();
-      self.labelCoordinateAxes();
     },
     begin: function begin() {
       var self = this;
@@ -44,10 +56,6 @@ module.exports = function () {
       gfx.resizeRendererOnWindowResize(renderer, camera);
       self.bindUIEvents();
       gfx.setUpLights();
-      gfx.labelPoint(new THREE.Vector3(-this.settings.floorSize / 2 - 5, 0, 0), '-X', black);
-      gfx.labelPoint(new THREE.Vector3(this.settings.floorSize / 2 + 1.5, 0, 0), '+X', black);
-      gfx.labelPoint(new THREE.Vector3(0, 0, -this.settings.floorSize / 2 - 2), '-Z', black);
-      gfx.labelPoint(new THREE.Vector3(0, 0, this.settings.floorSize / 2 + 4.5), '+Z', black);
       self.addGeometries(); //self.vectorInterpolation();
       //self.pointCloud();
 
@@ -56,8 +64,8 @@ module.exports = function () {
 
       var animate = function animate() {
         requestAnimationFrame(animate);
-        renderer.render(scene, camera);
-        if (controls) controls.update();
+        renderer.render(scene, camera); //if (controls) controls.update();
+
         var speed = 5;
         position = curvePoints[frameCount * speed % curvePoints.length]; // 10 is the speed
 
@@ -71,13 +79,14 @@ module.exports = function () {
         // 	box.verticesNeedUpdate = true;
         // });
 
+        camera.translateOnAxis(new THREE.Vector3(0, 0, 1), .4 * cameraDirection);
+        camera.rotateOnAxis(new THREE.Vector3(0, 0, 1), .02);
+        console.log(camera.position.z);
+        if (camera.position.z > 0.0010197999984740977 || camera.position.z < 0) cameraDirection *= -1;
         frameCount++;
       };
 
       animate();
-    },
-    labelCoordinateAxes: function labelCoordinateAxes() {
-      var self = this;
     },
     vectorInterpolation: function vectorInterpolation() {
       var start = new THREE.Vector3(-30, 0, -10);
@@ -149,8 +158,8 @@ module.exports = function () {
     },
     createCurve: function createCurve() {},
     addGeometries: function addGeometries() {
-      var self = this;
-      floor = gfx.addFloor(this.settings.floorSize, this.settings.colors.worldColor, this.settings.colors.gridColor);
+      var self = this; //floor = gfx.addFloor(this.settings.floorSize, this.settings.colors.worldColor, this.settings.colors.gridColor);
+
       var texture = new THREE.TextureLoader().load('assets/img/flower.jpg');
       texture.minFilter = THREE.LinearFilter;
       var material = new THREE.MeshBasicMaterial({
@@ -211,24 +220,27 @@ module.exports = function () {
       circleDot = dot.clone(); //scene.add(circleDot);
     },
     box: function box() {
-      var steps = 100;
+      var self = this;
+      var steps = 500;
 
       for (var i = steps; i > 0; i--) {
         var geometry = new THREE.BoxGeometry(10, .01, 10);
-        geometry.scale(i / 10, 1, i / 10);
+        geometry.scale(i, 1, i);
         var coloredMaterial = new THREE.MeshBasicMaterial({
           color: distinctColors[i % 10]
         });
-        var box = new THREE.Mesh(geometry, coloredMaterial); //geometry.rotateX(Math.log(2 * Math.PI / steps * i));
+        console.log(distinctColors[i % 10]);
+        var box = new THREE.Mesh(geometry, materials[i % 2]); //geometry.rotateX(Math.log(2 * Math.PI / steps * i));
 
-        geometry.rotateY(Math.log(2 * Math.PI / steps * i));
-        gfx.drawLine(box.geometry.vertices[0], box.geometry.vertices[1], new THREE.Color('black'), .35);
-        gfx.drawLine(box.geometry.vertices[3], box.geometry.vertices[4], new THREE.Color('black'), .35);
-        gfx.drawLine(box.geometry.vertices[4], box.geometry.vertices[5], new THREE.Color('black'), .35);
-        gfx.drawLine(box.geometry.vertices[5], box.geometry.vertices[0], new THREE.Color('black'), .35); //scene.add(box);
+        geometry.rotateY(Math.log(2 * Math.PI / steps * i)); // gfx.drawLine(box.geometry.vertices[0], box.geometry.vertices[1], new THREE.Color('black'), .35);
+        // gfx.drawLine(box.geometry.vertices[3], box.geometry.vertices[4], new THREE.Color('black'), .35);
+        // gfx.drawLine(box.geometry.vertices[4], box.geometry.vertices[5], new THREE.Color('black'), .35);
+        // gfx.drawLine(box.geometry.vertices[5], box.geometry.vertices[0], new THREE.Color('black'), .35);
 
-        boxes.push(box);
-        box.rotation.y += Math.log(2 * Math.PI / steps * i);
+        scene.add(box);
+        boxes.push(box); //box.rotation.y += Math.log(2 * Math.PI / steps * i);
+
+        box.translateOnAxis(new THREE.Vector3(0, 1, 0), -self.settings.zBufferOffset * i);
       }
     },
     pointCloud: function pointCloud() {
@@ -344,7 +356,14 @@ module.exports = function () {
             curveSegments: 1
           }
         },
-        errorLogging: false
+        errorLogging: false,
+        camera: {
+          position: {
+            x: 0,
+            y: 2,
+            z: 0
+          }
+        }
       },
       activateAxesHelper: function activateAxesHelper() {
         var self = this;
@@ -539,6 +558,7 @@ module.exports = function () {
       },
       setUpCamera: function setUpCamera(camera) {
         camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 1, 1000);
+        gfx.setCameraLocation(camera, this.appSettings.camera.position);
         return camera;
       },
       showPoints: function showPoints(geometry, color, opacity) {
