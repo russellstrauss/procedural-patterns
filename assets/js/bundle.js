@@ -11,6 +11,7 @@ module.exports = function () {
     opacity: 0.25,
     transparent: true
   });
+  var distinctColors = [new THREE.Color('#e6194b'), new THREE.Color('#3cb44b'), new THREE.Color('#ffe119'), new THREE.Color('#4363d8'), new THREE.Color('#f58231'), new THREE.Color('#911eb4'), new THREE.Color('#46f0f0'), new THREE.Color('#f032e6'), new THREE.Color('#bcf60c'), new THREE.Color('#fabebe'), new THREE.Color('#008080'), new THREE.Color('#e6beff'), new THREE.Color('#9a6324'), new THREE.Color('#fffac8'), new THREE.Color('#800000'), new THREE.Color('#aaffc3'), new THREE.Color('#808000'), new THREE.Color('#ffd8b1'), new THREE.Color('#000075'), new THREE.Color('#808080'), new THREE.Color('#ffffff'), new THREE.Color('#000000')];
   var black = new THREE.Color('black');
   var targetList = [];
   var frameCount = 0;
@@ -215,7 +216,10 @@ module.exports = function () {
       for (var i = steps; i > 0; i--) {
         var geometry = new THREE.BoxGeometry(10, .01, 10);
         geometry.scale(i / 10, 1, i / 10);
-        var box = new THREE.Mesh(geometry, wireframeMaterial); //geometry.rotateX(Math.log(2 * Math.PI / steps * i));
+        var coloredMaterial = new THREE.MeshBasicMaterial({
+          color: distinctColors[i % 10]
+        });
+        var box = new THREE.Mesh(geometry, coloredMaterial); //geometry.rotateX(Math.log(2 * Math.PI / steps * i));
 
         geometry.rotateY(Math.log(2 * Math.PI / steps * i));
         gfx.drawLine(box.geometry.vertices[0], box.geometry.vertices[1], new THREE.Color('black'), .35);
