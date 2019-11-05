@@ -176,7 +176,7 @@ module.exports = function() {
 				mi = m / steps * i;
 				currentLength = FA.length() + (m / steps) * (i - 1);
 				console.log(m);
-				let FstepVector = FA.clone().applyAxisAngle(rotationAxis, currentAngle).multiplyScalar(mi);
+				let FstepVector = FA.clone().applyAxisAngle(rotationAxis, currentAngle).setLength(currentLength / 3);
 				//console.log((10 / 2) - i / 2);
 				
 				let max = steps/2;
@@ -210,8 +210,10 @@ module.exports = function() {
 			
 			var geometry = new THREE.BoxGeometry(10, .01, 10);
 			var cube = new THREE.Mesh(geometry, material);
-			//scene.add(cube);
-			
+			scene.add(cube);
+			cube.translateOnAxis(new THREE.Vector3(0, 0, -1), 30);
+			cube.rotateOnAxis(new THREE.Vector3(1, 0, 0), Math.PI / 2);
+			cube.translateOnAxis(new THREE.Vector3(0, 0, -1), 5);
 			
 			
 			let curveSteps = .01;
@@ -306,10 +308,10 @@ module.exports = function() {
 			
 			window.addEventListener('mousemove', onMouseMove, false);
 			
-			document.querySelector('canvas').addEventListener('click', function(event) {
+			// document.querySelector('canvas').addEventListener('click', function(event) {
 				
-				self.intersects(event);
-			});
+			// 	self.intersects(event);
+			// });
 			
 			self.hideButtons();
 			

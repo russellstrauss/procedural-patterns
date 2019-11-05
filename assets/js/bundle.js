@@ -158,7 +158,7 @@ module.exports = function () {
         mi = m / steps * i;
         currentLength = FA.length() + m / steps * (i - 1);
         console.log(m);
-        var FstepVector = FA.clone().applyAxisAngle(rotationAxis, currentAngle).multiplyScalar(mi); //console.log((10 / 2) - i / 2);
+        var FstepVector = FA.clone().applyAxisAngle(rotationAxis, currentAngle).setLength(currentLength / 3); //console.log((10 / 2) - i / 2);
 
         var max = steps / 2; //console.log('i: ', i, ' ' + ((i - 1 % max) / max));
 
@@ -177,8 +177,11 @@ module.exports = function () {
         map: texture
       });
       var geometry = new THREE.BoxGeometry(10, .01, 10);
-      var cube = new THREE.Mesh(geometry, material); //scene.add(cube);
-
+      var cube = new THREE.Mesh(geometry, material);
+      scene.add(cube);
+      cube.translateOnAxis(new THREE.Vector3(0, 0, -1), 30);
+      cube.rotateOnAxis(new THREE.Vector3(1, 0, 0), Math.PI / 2);
+      cube.translateOnAxis(new THREE.Vector3(0, 0, -1), 5);
       var curveSteps = .01;
       var pointCount = 2000;
       var height = 4;
@@ -260,10 +263,10 @@ module.exports = function () {
         mouse.y = -((event.clientY - renderer.domElement.offsetTop) / renderer.domElement.height) * 2 + 1;
       };
 
-      window.addEventListener('mousemove', onMouseMove, false);
-      document.querySelector('canvas').addEventListener('click', function (event) {
-        self.intersects(event);
-      });
+      window.addEventListener('mousemove', onMouseMove, false); // document.querySelector('canvas').addEventListener('click', function(event) {
+      // 	self.intersects(event);
+      // });
+
       self.hideButtons();
       document.addEventListener('keyup', function (event) {
         var c = 67;
