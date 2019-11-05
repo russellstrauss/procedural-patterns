@@ -33,6 +33,8 @@ module.exports = function () {
       circleCurve = [];
   var boxes = [];
   var cameraDirection = 1;
+  var curves = false,
+      cameraAnimate = false;
   return {
     settings: {
       zBufferOffset: 1,
@@ -46,6 +48,325 @@ module.exports = function () {
     init: function init() {
       var self = this;
       self.loadAssets();
+      var button = document.querySelector('#curves');
+      if (button) button.addEventListener('click', function () {
+        curves = true;
+        self.begin();
+        document.querySelector('#curveControls').style.display = 'block';
+      });
+      button = document.querySelector('#interpolation');
+      if (button) button.addEventListener('click', function () {
+        self.begin();
+        self.vectorInterpolation();
+        document.querySelector('#interpolationControls').style.display = 'block';
+      });
+    },
+    begin: function begin() {
+      var self = this;
+      scene = gfx.setUpScene();
+      renderer = gfx.setUpRenderer(renderer);
+      camera = gfx.setUpCamera(camera);
+      controls = gfx.enableControls(controls, renderer, camera);
+      gfx.resizeRendererOnWindowResize(renderer, camera);
+      self.bindUIEvents();
+      gfx.setUpLights();
+      floor = gfx.addFloor(this.settings.floorSize, this.settings.colors.worldColor, this.settings.colors.gridColor); //self.pointCloud();
+
+      if (curves) self.addGeometries();
+      var position;
+
+      var animate = function animate() {
+        requestAnimationFrame(animate);
+        renderer.render(scene, camera);
+        if (controls) controls.update();
+
+        if (curves) {
+          var speed = 5;
+          position = curvePoints[frameCount * speed % curvePoints.length]; // 10 is the speed
+
+          dot.position.set(position.x, position.y, 0);
+          if (cameraAnimate === 'sin') camera.position.set(position.x, position.y, 0);
+          position = logCurve[frameCount * speed % logCurve.length]; // 10 is the speed
+
+          logDot.position.set(position.x, position.y, 10);
+          if (cameraAnimate === 'log') camera.position.set(position.x, position.y, 10);
+          position = circleCurve[frameCount * speed % circleCurve.length];
+          circleDot.position.set(position.x, 0, position.y);
+          if (cameraAnimate === 'circle') camera.position.set(position.x, position.y, 10);
+        }
+
+        frameCount++;
+      };
+
+      animate();
+    },
+    vectorInterpolation: function vectorInterpolation() {
+      var start = new THREE.Vector3(-30, 0, -10);
+      var end = new THREE.Vector3(10, 0, -15);
+      var startOrigin = new THREE.Vector3(-40, 0, -15);
+      var endOrigin = new THREE.Vector3(20, 0, -15);
+      gfx.showVector(start, startOrigin);
+      gfx.showVector(end, endOrigin);
+      var center = new THREE.Geometry(); // get centroid for camera orientation
+
+      center.vertices.push(startOrigin, endOrigin, gfx.movePoint(startOrigin, start), gfx.movePoint(endOrigin, end));
+      center = gfx.getCentroid(center);
+      controls.target.set(center.x, center.y, center.z);
+      gfx.setCameraLocation(camera, gfx.movePoint(center, new THREE.Vector3(0, 50, 0)));
+      controls.update();
+      var A = startOrigin;
+      var B = gfx.movePoint(startOrigin, start);
+      var C = endOrigin;
+      var D = gfx.movePoint(endOrigin, end);
+      var BD = gfx.createVector(B, D);
+      var AC = gfx.createVector(A, C);
+      var Dprime = gfx.movePoint(startOrigin, gfx.createVector(endOrigin, gfx.movePoint(endOrigin, end)));
+      var BDprime = gfx.createVector(B, Dprime);
+      var ADprime = gfx.createVector(endOrigin, gfx.movePoint(endOrigin, end)); // gfx.showVector(BD, B, new THREE.Color('purple'));
+      // gfx.showVector(AC, A, new THREE.Color('purple'));
+
+      gfx.labelPoint(A, 'A');
+      gfx.labelPoint(B, 'B');
+      gfx.labelPoint(C, 'C');
+      gfx.labelPoint(D, 'D');
+      var beta = gfx.getAngleBetweenVectors(BD, BDprime);
+      var rotationAxis = BD.clone().cross(BDprime.clone()).normalize();
+      var BArotated = gfx.createVector(B, A).applyAxisAngle(rotationAxis, beta).multiplyScalar(BD.length() / BDprime.length());
+      var F = gfx.movePoint(B, BArotated);
+      gfx.showPoint(F, new THREE.Color('black'));
+      gfx.labelPoint(new THREE.Vector3(F.x, F.y + .1, F.z), 'F', new THREE.Color('black'));
+      var FA = gfx.createVector(F, A);
+      var FC = gfx.createVector(F, C);
+      var AFCnormal = FA.clone().cross(FC).normalize();
+      gfx.showVector(FA, F, new THREE.Color('black'));
+      gfx.showVector(FC, F, new THREE.Color('black'));
+      var totalAngle = gfx.calculateAngle(A, C, F);
+      var AB = gfx.createVector(A, B);
+      var CD = gfx.createVector(C, D);
+      var steps = 10;
+
+      for (var i = 1; i < steps + 1; i++) {
+        var currentAngle = totalAngle / steps * i;
+        var a = gfx.getAngleBetweenVectors(AB, CD);
+        var CA2 = a / steps * i;
+        var m = CD.length() / AB.length();
+        var mi = m / steps * i;
+        var currentRatio = AB.clone().applyAxisAngle(rotationAxis, CA2).lerpVectors(AB, CD, i / steps);
+        var currentLength = AB.length() + m / steps * (i - 1);
+        rotationAxis = AFCnormal.clone();
+        m = FC.length() / FA.length();
+        mi = m / steps * i;
+        currentLength = FA.length() + m / steps * (i - 1);
+        console.log(m);
+        var FstepVector = FA.clone().applyAxisAngle(rotationAxis, currentAngle).multiplyScalar(mi); //console.log((10 / 2) - i / 2);
+
+        var max = steps / 2; //console.log('i: ', i, ' ' + ((i - 1 % max) / max));
+
+        gfx.showVector(FstepVector, F, black);
+        var startingPoint = gfx.movePoint(F, FstepVector);
+        gfx.showPoint(startingPoint);
+        gfx.showVector(currentRatio, startingPoint);
+      }
+    },
+    addGeometries: function addGeometries() {
+      var self = this;
+      gfx.setCameraLocation(camera, new THREE.Vector3(0, 30, 30));
+      var texture = new THREE.TextureLoader().load('assets/img/flower.jpg');
+      texture.minFilter = THREE.LinearFilter;
+      var material = new THREE.MeshBasicMaterial({
+        map: texture
+      });
+      var geometry = new THREE.BoxGeometry(10, .01, 10);
+      var cube = new THREE.Mesh(geometry, material); //scene.add(cube);
+
+      var curveSteps = .01;
+      var pointCount = 2000;
+      var height = 4;
+
+      for (var i = 0; i < pointCount * curveSteps; i += curveSteps) {
+        curvePoints.push(new THREE.Vector3(i, height + height * Math.sin(i), 0));
+      }
+
+      var curve = new THREE.SplineCurve(curvePoints);
+      var points = curve.getPoints(pointCount);
+      geometry = new THREE.BufferGeometry().setFromPoints(points);
+      material = new THREE.LineBasicMaterial({
+        color: 0xff0000
+      });
+      var dotGeometry = new THREE.Geometry();
+      dotGeometry.vertices.push(new THREE.Vector3(0, 0, 0));
+      var dotMaterial = new THREE.PointsMaterial({
+        size: 10,
+        sizeAttenuation: false,
+        color: 0x00ff00,
+        opacity: 1,
+        transparent: true
+      });
+      dot = new THREE.Points(dotGeometry, dotMaterial);
+      scene.add(dot);
+      var splineObject = new THREE.Line(geometry, material);
+      scene.add(splineObject);
+
+      for (var _i = 1; _i < pointCount * curveSteps + 1; _i += curveSteps) {
+        logCurve.push(new THREE.Vector3(_i, 2 * Math.log(_i), 0));
+      }
+
+      var logSplineCurve = new THREE.SplineCurve(logCurve);
+      points = logSplineCurve.getPoints(pointCount);
+      geometry = new THREE.BufferGeometry().setFromPoints(points);
+      var logSpline = new THREE.Line(geometry, material);
+      scene.add(logSpline);
+      logSpline.translateOnAxis(new THREE.Vector3(0, 0, 1), 10);
+      logDot = dot.clone();
+      scene.add(logDot);
+
+      for (var _i2 = 1; _i2 < pointCount * curveSteps + 1; _i2 += curveSteps) {
+        circleCurve.push(new THREE.Vector3(5 * Math.cos(_i2) - 20, 5 * Math.sin(_i2), 0));
+      }
+
+      var circleSplineCurve = new THREE.SplineCurve(circleCurve);
+      points = circleSplineCurve.getPoints(pointCount);
+      geometry = new THREE.BufferGeometry().setFromPoints(points);
+      var circleSpline = new THREE.Line(geometry, material);
+      scene.add(circleSpline);
+      circleSpline.rotation.x += Math.PI / 2;
+      circleDot = dot.clone();
+      scene.add(circleDot);
+    },
+    pointCloud: function pointCloud() {
+      var points = new THREE.Geometry();
+      var size = 10;
+      var spacing = 5;
+
+      for (var i = 0; i < size + 1; i++) {
+        for (var j = 0; j < size + 1; j++) {
+          points.vertices.push(new THREE.Vector3(i * spacing, 0, j * spacing));
+        }
+      } //gfx.showPoints(points);
+
+
+      for (var _i3 = 0; _i3 < size + 1; _i3++) {
+        for (var _j = size; _j > 0; _j--) {
+          if (points.vertices[_i3 * _j]) gfx.drawLine(points.vertices[_i3], points.vertices[_i3 * _j]), new THREE.Color('black');
+        }
+      }
+    },
+    bindUIEvents: function bindUIEvents() {
+      var self = this;
+      var message = document.getElementById('message');
+
+      var onMouseMove = function onMouseMove(event) {
+        mouse.x = (event.clientX - renderer.domElement.offsetLeft) / renderer.domElement.width * 2 - 1;
+        mouse.y = -((event.clientY - renderer.domElement.offsetTop) / renderer.domElement.height) * 2 + 1;
+      };
+
+      window.addEventListener('mousemove', onMouseMove, false);
+      document.querySelector('canvas').addEventListener('click', function (event) {
+        self.intersects(event);
+      });
+      self.hideButtons();
+      document.addEventListener('keyup', function (event) {
+        var c = 67;
+        var s = 83;
+        var l = 76;
+
+        if (event.keyCode === c) {
+          cameraAnimate = 'circle';
+        }
+
+        if (event.keyCode === s) {
+          cameraAnimate = 'sin';
+        }
+
+        if (event.keyCode === l) {
+          cameraAnimate = 'log';
+        }
+      });
+    },
+    loadAssets: function loadAssets() {
+      var self = this;
+      var loader = new THREE.FontLoader();
+      var fontPath = '';
+      fontPath = 'assets/vendors/js/three.js/examples/fonts/helvetiker_regular.typeface.json';
+      loader.load(fontPath, function (font) {
+        // success event
+        gfx.appSettings.font.fontStyle.font = font;
+      }, function (event) {// in progress event.
+      }, function (event) {
+        // error event
+        gfx.appSettings.font.enable = false;
+      });
+    },
+    resizeRendererOnWindowResize: function resizeRendererOnWindowResize() {
+      window.addEventListener('resize', utils.debounce(function () {
+        if (renderer) {
+          camera.aspect = window.innerWidth / window.innerHeight;
+          camera.updateProjectionMatrix();
+          renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+      }, 250));
+    },
+    hideButtons: function hideButtons() {
+      var buttons = document.querySelectorAll('.modes');
+      buttons.forEach(function (button) {
+        button.style.display = 'none';
+      });
+    }
+  };
+};
+
+},{}],2:[function(require,module,exports){
+"use strict";
+
+module.exports = function () {
+  var renderer, scene, camera, controls, floor;
+  var raycaster = new THREE.Raycaster();
+  var mouse = new THREE.Vector2();
+  var wireframeMaterial = new THREE.MeshBasicMaterial({
+    wireframe: true,
+    color: new THREE.Color('black'),
+    opacity: 0.25,
+    transparent: true
+  });
+  var translucentMaterial = new THREE.MeshBasicMaterial({
+    color: new THREE.Color('#69D2E7'),
+    opacity: 0.01,
+    transparent: true
+  });
+  var blackMaterial = new THREE.MeshBasicMaterial({
+    color: new THREE.Color('black')
+  }),
+      whiteMaterial = new THREE.MeshBasicMaterial({
+    color: new THREE.Color('white')
+  });
+  var materials = [blackMaterial, whiteMaterial];
+  var distinctColors = [new THREE.Color('#e6194b'), new THREE.Color('#3cb44b'), new THREE.Color('#ffe119'), new THREE.Color('#4363d8'), new THREE.Color('#f58231'), new THREE.Color('#911eb4'), new THREE.Color('#46f0f0'), new THREE.Color('#f032e6'), new THREE.Color('#bcf60c'), new THREE.Color('#fabebe'), new THREE.Color('#008080'), new THREE.Color('#e6beff'), new THREE.Color('#9a6324'), new THREE.Color('#fffac8'), new THREE.Color('#800000'), new THREE.Color('#aaffc3'), new THREE.Color('#808000'), new THREE.Color('#ffd8b1'), new THREE.Color('#000075'), new THREE.Color('#808080'), new THREE.Color('#ffffff'), new THREE.Color('#000000')];
+  var black = new THREE.Color('black');
+  var targetList = [];
+  var frameCount = 0;
+  var dot, logDot, circleDot;
+  var curvePoints = [],
+      logCurve = [],
+      circleCurve = [];
+  var boxes = [];
+  var cameraDirection = 1;
+  return {
+    settings: {
+      zBufferOffset: 1,
+      colors: {
+        worldColor: new THREE.Color('white'),
+        gridColor: black,
+        arrowColor: black
+      },
+      floorSize: 100
+    },
+    init: function init() {
+      var self = this;
+      self.loadAssets();
+      var button = document.querySelector('#pattern');
+      if (button) button.addEventListener('click', function () {
+        self.begin();
+      });
     },
     begin: function begin() {
       var self = this;
@@ -274,6 +595,7 @@ module.exports = function () {
       document.querySelector('canvas').addEventListener('click', function (event) {
         self.intersects(event);
       });
+      self.hideButtons();
     },
     intersects: function intersects(event) {
       var self = this;
@@ -293,12 +615,10 @@ module.exports = function () {
       loader.load(fontPath, function (font) {
         // success event
         gfx.appSettings.font.fontStyle.font = font;
-        self.begin();
       }, function (event) {// in progress event.
       }, function (event) {
         // error event
         gfx.appSettings.font.enable = false;
-        self.begin();
       });
     },
     resizeRendererOnWindowResize: function resizeRendererOnWindowResize() {
@@ -309,11 +629,17 @@ module.exports = function () {
           renderer.setSize(window.innerWidth, window.innerHeight);
         }
       }, 250));
+    },
+    hideButtons: function hideButtons() {
+      var buttons = document.querySelectorAll('button');
+      buttons.forEach(function (button) {
+        button.style.display = 'none';
+      });
     }
   };
 };
 
-},{}],2:[function(require,module,exports){
+},{}],3:[function(require,module,exports){
 "use strict";
 
 module.exports = function () {
@@ -332,7 +658,7 @@ module.exports = function () {
   };
 };
 
-},{}],3:[function(require,module,exports){
+},{}],4:[function(require,module,exports){
 "use strict";
 
 (function () {
@@ -772,10 +1098,12 @@ module.exports = function () {
   module.exports = window.gfx;
 })();
 
-},{}],4:[function(require,module,exports){
+},{}],5:[function(require,module,exports){
 "use strict";
 
 var Patterns = require('./components/patterns.js');
+
+var Curves = require('./components/curves.js');
 
 var UI = require('./components/ui.js');
 
@@ -786,11 +1114,12 @@ var Graphics = require('./graphics.js');
 (function () {
   document.addEventListener('DOMContentLoaded', function () {
     Patterns().init();
+    Curves().init();
     UI().init();
   });
 })();
 
-},{"./components/patterns.js":1,"./components/ui.js":2,"./graphics.js":3,"./utils.js":5}],5:[function(require,module,exports){
+},{"./components/curves.js":1,"./components/patterns.js":2,"./components/ui.js":3,"./graphics.js":4,"./utils.js":6}],6:[function(require,module,exports){
 "use strict";
 
 (function () {
@@ -893,4 +1222,4 @@ var Graphics = require('./graphics.js');
   module.exports = window.utils;
 })();
 
-},{}]},{},[4]);
+},{}]},{},[5]);

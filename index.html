@@ -12,7 +12,47 @@
 <body>
 	
 
-	<!-- <div id="legend">		
+	<div class="legend" id="curveControls">
+		<span class="legend-title">Controls</span>
+		<div class="backdrop">
+			<table>
+				<thead>
+					<tr class="divider">
+						<td>Function</td>
+						<td>Key</td>
+					</tr>
+				</thead>
+				<tbody>
+					<tr>
+						<td>Rotate</td>
+						<td>left click</td>
+					</tr>
+					<tr>
+						<td>Pan</td>
+						<td>right click</td>
+					</tr>
+					<tr>
+						<td>Zoom</td>
+						<td>scroll</td>
+					</tr>
+					<tr>
+						<td>C</td>
+						<td>Animate Camera Along Circle</td>
+					</tr>
+					<tr>
+						<td>L</td>
+						<td>Animate Camera Along Logarithmic Curve</td>
+					</tr>
+					<tr>
+						<td>S</td>
+						<td>Animate Camera Along Sine Curve</td>
+					</tr>
+				</tbody>
+			</table>
+		</div>
+	</div>
+	
+	<div class="legend" id="interpolationControls">
 		<span class="legend-title">Controls</span>
 		<div class="backdrop">
 			<table>
@@ -38,8 +78,12 @@
 				</tbody>
 			</table>
 		</div>
-	</div> -->
-		
+	</div>
+	
+	<div class="modes">
+		<button id="pattern">Procedural Pattern</button>
+		<button id="curves">Animation Curves</button>
+		<button id="interpolation">Vector Interpolation</button>
 	</div>
 	
 	<div id="author">

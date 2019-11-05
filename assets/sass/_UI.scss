@@ -96,8 +96,9 @@ $buttonWidth: 175px;
 	transform: translateX(-50%);
 }
 
-$legendWidth: 150px;
-#legend {
+$legendWidth: 300px;
+.legend {
+	display: none;
 	width: $legendWidth;
 	font-size: 12px;
 	position: absolute;
@@ -137,7 +138,7 @@ $legendWidth: 150px;
 			}
 			
 			td {
-				width: 50%;
+				//width: 25%;
 				
 				
 				&:last-of-type {
@@ -148,53 +149,20 @@ $legendWidth: 150px;
 	}
 }
 
-.play-controls {
-	position: absolute;
-	//left: $legendWidth + 40px;
-	left: 20px;
-	bottom: 10px;
+.modes {
 	display: flex;
-	flex-direction: row;
+	flex-direction: column;
+	justify-content: center;
+	position: fixed;
+	top: 0;
+	left: 0;
+	bottom: 0;
+	right: 0;
 	
-	@include mobile-only {
-		bottom: 60px;
-		display: flex;
-		justify-content: space-between;
-	}
-	
-	.control {
-		margin-right: 30px;
-	}
-	
-	.play-toggle {
-		display: flex;
-		flex-direction: column;
-		justify-content: flex-end;
-		
-		&.active {
-			
-			.play {
-				display: none;
-			}
-			
-			.pause {
-				display: block;
-			}
-		}
-		
-		.play {
-			display: block;
-		}
-		
-		.pause {
-			display: none;
-		}
-		
-		.play, .pause {
-			width: 50px;
-			height: 50px;
-			cursor: pointer;
-		}
+	button {
+		width: 200px;
+		margin: 5px auto;
+		cursor: pointer;
 	}
 }
 

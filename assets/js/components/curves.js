@@ -16,6 +16,7 @@ module.exports = function() {
 	var curvePoints = [], logCurve = [], circleCurve = [];
 	var boxes = [];
 	var cameraDirection = 1;
+	var curves = false, cameraAnimate = false;
 	
 	return {
 		
@@ -33,9 +34,17 @@ module.exports = function() {
 
 			let self = this;
 			self.loadAssets();
-			let button = document.querySelector('#pattern');
+			let button = document.querySelector('#curves');
+			if (button) button.addEventListener('click', function() {
+				curves = true;
+				self.begin();
+				document.querySelector('#curveControls').style.display = 'block';
+			});
+			button = document.querySelector('#interpolation');
 			if (button) button.addEventListener('click', function() {
 				self.begin();
+				self.vectorInterpolation();
+				document.querySelector('#interpolationControls').style.display = 'block';
 			});
 		},
 		
@@ -50,39 +59,33 @@ module.exports = function() {
 			gfx.resizeRendererOnWindowResize(renderer, camera);
 			self.bindUIEvents();
 			gfx.setUpLights();
+			floor = gfx.addFloor(this.settings.floorSize, this.settings.colors.worldColor, this.settings.colors.gridColor);
 			
-			self.addGeometries();
-			//self.vectorInterpolation();
 			//self.pointCloud();
-			self.box();
+			
+			if (curves) self.addGeometries();
 			
 			var position;
 			var animate = function() {
 
 				requestAnimationFrame(animate);
 				renderer.render(scene, camera);
-				//if (controls) controls.update();
+				if (controls) controls.update();
 				
-				let speed = 5;
-				position = curvePoints[(frameCount * speed) % curvePoints.length]; // 10 is the speed
-				dot.position.set(position.x, position.y, 0);
-				position = logCurve[(frameCount * speed) % logCurve.length]; // 10 is the speed
-				logDot.position.set(position.x, position.y, 10);
-				
-				position = circleCurve[(frameCount * speed) % circleCurve.length];
-				circleDot.position.set(position.x, (frameCount % 100) / 100 * 10, position.y);
-				
-				// boxes.forEach(function(box) {
-				// 	box.rotation.y += .001;
-				// 	box.verticesNeedUpdate = true;
-				// });
-				
-				camera.translateOnAxis(new THREE.Vector3(0, 0, 1), .4 * cameraDirection);
-				camera.rotateOnAxis(new THREE.Vector3(0, 0, 1), .02);
-				console.log(camera.position.z);
-				
-				if (camera.position.z > 0.0010197999984740977 || camera.position.z < 0) cameraDirection *= -1;
-				
+				if (curves) {
+					
+					let speed = 5;
+					position = curvePoints[(frameCount * speed) % curvePoints.length]; // 10 is the speed
+					dot.position.set(position.x, position.y, 0);
+					if (cameraAnimate === 'sin') camera.position.set(position.x, position.y, 0);
+					position = logCurve[(frameCount * speed) % logCurve.length]; // 10 is the speed
+					logDot.position.set(position.x, position.y, 10);
+					if (cameraAnimate === 'log') camera.position.set(position.x, position.y, 10);
+					
+					position = circleCurve[(frameCount * speed) % circleCurve.length];
+					circleDot.position.set(position.x, 0, position.y);
+					if (cameraAnimate === 'circle') camera.position.set(position.x, position.y, 10);
+				}
 				
 				frameCount++;
 			};
@@ -195,15 +198,11 @@ module.exports = function() {
 			
 		},
 		
-		createCurve: function() {
-			
-		},
-		
 		addGeometries: function() {
 			
 			let self = this;
 			
-			//floor = gfx.addFloor(this.settings.floorSize, this.settings.colors.worldColor, this.settings.colors.gridColor);
+			gfx.setCameraLocation(camera, new THREE.Vector3(0, 30, 30));
 			
 			var texture = new THREE.TextureLoader().load( 'assets/img/flower.jpg' );
 			texture.minFilter = THREE.LinearFilter;
@@ -237,10 +236,10 @@ module.exports = function() {
 				transparent: true
 			});
 			dot = new THREE.Points(dotGeometry, dotMaterial);
-			//scene.add(dot);
+			scene.add(dot);
 			
 			var splineObject = new THREE.Line(geometry, material);
-			//scene.add(splineObject);			
+			scene.add(splineObject);			
 			
 			for (let i = 1; i < (pointCount * curveSteps) + 1; i += curveSteps) {
 
@@ -250,55 +249,24 @@ module.exports = function() {
 			points = logSplineCurve.getPoints(pointCount);
 			geometry = new THREE.BufferGeometry().setFromPoints( points );
 			var logSpline = new THREE.Line(geometry, material);
-			//scene.add(logSpline);
+			scene.add(logSpline);
 			logSpline.translateOnAxis(new THREE.Vector3(0, 0, 1), 10);
 			logDot = dot.clone();
-			//scene.add(logDot);
-			
+			scene.add(logDot);
 			
 	
 			for (let i = 1; i < (pointCount * curveSteps) + 1; i += curveSteps) {
 
-				circleCurve.push(new THREE.Vector3(5 * Math.cos(i), 5 * Math.sin(i), 0));
+				circleCurve.push(new THREE.Vector3(5 * Math.cos(i) - 20, 5 * Math.sin(i), 0));
 			}
 			var circleSplineCurve = new THREE.SplineCurve(circleCurve);
 			points = circleSplineCurve.getPoints(pointCount);
 			geometry = new THREE.BufferGeometry().setFromPoints(points);
 			var circleSpline = new THREE.Line(geometry, material);
-			//scene.add(circleSpline);
+			scene.add(circleSpline);
 			circleSpline.rotation.x += Math.PI / 2;
 			circleDot = dot.clone();
-			//scene.add(circleDot);
-		},
-		
-		box: function() {
-			
-			let self = this;
-			let steps = 500;
-			for (let i = steps; i > 0; i--) {
-				
-				var geometry = new THREE.BoxGeometry(10, .01, 10);
-				geometry.scale(i, 1, i);
-				
-				let coloredMaterial = new THREE.MeshBasicMaterial({ color: distinctColors[i%10] });
-				console.log(distinctColors[i%10]);
-				
-				var box = new THREE.Mesh(geometry, materials[i%2]);
-				
-				//geometry.rotateX(Math.log(2 * Math.PI / steps * i));
-				geometry.rotateY(Math.log(2 * Math.PI / steps * i));
-				
-				// gfx.drawLine(box.geometry.vertices[0], box.geometry.vertices[1], new THREE.Color('black'), .35);
-				// gfx.drawLine(box.geometry.vertices[3], box.geometry.vertices[4], new THREE.Color('black'), .35);
-				// gfx.drawLine(box.geometry.vertices[4], box.geometry.vertices[5], new THREE.Color('black'), .35);
-				// gfx.drawLine(box.geometry.vertices[5], box.geometry.vertices[0], new THREE.Color('black'), .35);
-				
-				scene.add(box);
-				boxes.push(box);
-				//box.rotation.y += Math.log(2 * Math.PI / steps * i);
-				box.translateOnAxis(new THREE.Vector3(0, 1, 0), -self.settings.zBufferOffset * i);
-			}
-			
+			scene.add(circleDot);
 		},
 		
 		pointCloud: function() {
@@ -344,19 +312,26 @@ module.exports = function() {
 			});
 			
 			self.hideButtons();
-		},
-		
-		intersects: function(event) {
 			
-			let self = this;
-			raycaster.setFromCamera(mouse, camera);
-			var intersects = raycaster.intersectObjects(targetList);
 			
-			if (intersects.length > 0) {
+			document.addEventListener('keyup', function(event) {
 				
-				let faceIndex = intersects[0].faceIndex;
-				self.setUpFaceClicks(faceIndex);
-			}
+				let c = 67;
+				let s = 83;
+				let l = 76;
+
+				
+				if (event.keyCode === c) {
+					cameraAnimate = 'circle';
+				}
+				if (event.keyCode === s) {
+					cameraAnimate = 'sin';
+				}
+				if (event.keyCode === l) {
+					cameraAnimate = 'log';
+				}
+			});
+			
 		},
 		
 		loadAssets: function() {
@@ -391,7 +366,7 @@ module.exports = function() {
 		},
 		
 		hideButtons: function() {
-			let buttons = document.querySelectorAll('button');
+			let buttons = document.querySelectorAll('.modes');
 			buttons.forEach(function(button) {
 				button.style.display = 'none';
 			});
