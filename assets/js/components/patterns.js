@@ -15,7 +15,7 @@ module.exports = function() {
 	var dot, logDot, circleDot;
 	var curvePoints = [], logCurve = [], circleCurve = [];
 	var boxes = [];
-	var cameraDirection = 1;
+	var cameraDirection = 1, patternOption;
 	
 	return {
 		
@@ -35,6 +35,13 @@ module.exports = function() {
 			self.loadAssets();
 			let button = document.querySelector('#pattern');
 			if (button) button.addEventListener('click', function() {
+				patternOption = 1;
+				self.begin();
+			});
+			
+			button = document.querySelector('#pattern2');
+			if (button) button.addEventListener('click', function() {
+				patternOption = 2;
 				self.begin();
 			});
 		},
@@ -54,7 +61,8 @@ module.exports = function() {
 			self.addGeometries();
 			//self.vectorInterpolation();
 			//self.pointCloud();
-			self.box();
+			if (patternOption === 1) self.box();
+			if (patternOption === 2) self.box2();
 			
 			var position;
 			var animate = function() {
@@ -195,10 +203,6 @@ module.exports = function() {
 			
 		},
 		
-		createCurve: function() {
-			
-		},
-		
 		addGeometries: function() {
 			
 			let self = this;
@@ -277,7 +281,7 @@ module.exports = function() {
 			let steps = 500;
 			for (let i = steps; i > 0; i--) {
 				
-				var geometry = new THREE.BoxGeometry(10, .01, 10);
+				var geometry = new THREE.BoxGeometry(5, .01, 5);
 				geometry.scale(i, 1, i);
 				
 				let coloredMaterial = new THREE.MeshBasicMaterial({ color: distinctColors[i%10] });
@@ -286,7 +290,37 @@ module.exports = function() {
 				var box = new THREE.Mesh(geometry, materials[i%2]);
 				
 				//geometry.rotateX(Math.log(2 * Math.PI / steps * i));
-				geometry.rotateY(Math.log(2 * Math.PI / steps * i));
+				geometry.rotateY(Math.log(Math.PI / steps * i));
+				
+				// gfx.drawLine(box.geometry.vertices[0], box.geometry.vertices[1], new THREE.Color('black'), .35);
+				// gfx.drawLine(box.geometry.vertices[3], box.geometry.vertices[4], new THREE.Color('black'), .35);
+				// gfx.drawLine(box.geometry.vertices[4], box.geometry.vertices[5], new THREE.Color('black'), .35);
+				// gfx.drawLine(box.geometry.vertices[5], box.geometry.vertices[0], new THREE.Color('black'), .35);
+				
+				scene.add(box);
+				boxes.push(box);
+				//box.rotation.y += Math.log(2 * Math.PI / steps * i);
+				box.translateOnAxis(new THREE.Vector3(0, 1, 0), -self.settings.zBufferOffset * i);
+			}
+			
+		},
+		
+		box2: function() {
+			
+			let self = this;
+			let steps = 500;
+			for (let i = steps; i > 0; i--) {
+				
+				var geometry = new THREE.BoxGeometry(1, .01, 1);
+				geometry.scale(i, 1, i);
+				
+				let coloredMaterial = new THREE.MeshBasicMaterial({ color: distinctColors[i%10] });
+				console.log(distinctColors[i%10]);
+				
+				var box = new THREE.Mesh(geometry, materials[i%2]);
+				
+				//geometry.rotateX(Math.log(2 * Math.PI / steps * i));
+				geometry.rotateY(Math.log(Math.PI / steps * i));
 				
 				// gfx.drawLine(box.geometry.vertices[0], box.geometry.vertices[1], new THREE.Color('black'), .35);
 				// gfx.drawLine(box.geometry.vertices[3], box.geometry.vertices[4], new THREE.Color('black'), .35);
