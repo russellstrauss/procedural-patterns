@@ -319,11 +319,12 @@
 				}
 			},
 
-			drawLine: function(pt1, pt2, color) {
+			drawLine: function(pt1, pt2, color, opacity) {
 				
 				color = color || 0x0000ff;
+				opacity = opacity || 1;
 				
-				let material = new THREE.LineBasicMaterial({ color: color });
+				let material = new THREE.LineBasicMaterial({ color: color, transparent: true, opacity: opacity });
 				let geometry = new THREE.Geometry();
 				geometry.vertices.push(new THREE.Vector3(pt1.x, pt1.y, pt1.z));
 				geometry.vertices.push(new THREE.Vector3(pt2.x, pt2.y, pt2.z));

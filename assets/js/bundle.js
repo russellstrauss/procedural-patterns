@@ -14,9 +14,11 @@ module.exports = function () {
   var black = new THREE.Color('black');
   var targetList = [];
   var frameCount = 0;
-  var dot, logDot;
+  var dot, logDot, circleDot;
   var curvePoints = [],
-      logCurve = [];
+      logCurve = [],
+      circleCurve = [];
+  var boxes = [];
   return {
     settings: {
       zBufferOffset: 0.01,
@@ -45,21 +47,29 @@ module.exports = function () {
       gfx.labelPoint(new THREE.Vector3(this.settings.floorSize / 2 + 1.5, 0, 0), '+X', black);
       gfx.labelPoint(new THREE.Vector3(0, 0, -this.settings.floorSize / 2 - 2), '-Z', black);
       gfx.labelPoint(new THREE.Vector3(0, 0, this.settings.floorSize / 2 + 4.5), '+Z', black);
-      self.addGeometries();
-      self.vectorInterpolation();
+      self.addGeometries(); //self.vectorInterpolation();
+      //self.pointCloud();
+
+      self.box();
       var position;
 
       var animate = function animate() {
         requestAnimationFrame(animate);
         renderer.render(scene, camera);
         if (controls) controls.update();
-        var speed = 10;
+        var speed = 5;
         position = curvePoints[frameCount * speed % curvePoints.length]; // 10 is the speed
 
         dot.position.set(position.x, position.y, 0);
         position = logCurve[frameCount * speed % logCurve.length]; // 10 is the speed
 
         logDot.position.set(position.x, position.y, 10);
+        position = circleCurve[frameCount * speed % circleCurve.length];
+        circleDot.position.set(position.x, frameCount % 100 / 100 * 10, position.y); // boxes.forEach(function(box) {
+        // 	box.rotation.y += .001;
+        // 	box.verticesNeedUpdate = true;
+        // });
+
         frameCount++;
       };
 
@@ -69,9 +79,9 @@ module.exports = function () {
       var self = this;
     },
     vectorInterpolation: function vectorInterpolation() {
-      var start = new THREE.Vector3(0, 0, -10);
+      var start = new THREE.Vector3(-30, 0, -10);
       var end = new THREE.Vector3(10, 0, -15);
-      var startOrigin = new THREE.Vector3(10, 0, -15);
+      var startOrigin = new THREE.Vector3(-40, 0, -15);
       var endOrigin = new THREE.Vector3(20, 0, -15);
       gfx.showVector(start, startOrigin);
       gfx.showVector(end, endOrigin);
@@ -80,7 +90,7 @@ module.exports = function () {
       center.vertices.push(startOrigin, endOrigin, gfx.movePoint(startOrigin, start), gfx.movePoint(endOrigin, end));
       center = gfx.getCentroid(center);
       controls.target.set(center.x, center.y, center.z);
-      gfx.setCameraLocation(camera, gfx.movePoint(center, new THREE.Vector3(0, 30, 0)));
+      gfx.setCameraLocation(camera, gfx.movePoint(center, new THREE.Vector3(0, 50, 0)));
       controls.update();
       var A = startOrigin;
       var B = gfx.movePoint(startOrigin, start);
@@ -108,10 +118,9 @@ module.exports = function () {
       var AFCnormal = FA.clone().cross(FC).normalize();
       gfx.showVector(FA, F, new THREE.Color('black'));
       gfx.showVector(FC, F, new THREE.Color('black'));
-      var totalAngle = gfx.calculateAngle(A, F, C);
+      var totalAngle = gfx.calculateAngle(A, C, F);
       var AB = gfx.createVector(A, B);
       var CD = gfx.createVector(C, D);
-      console.log(AB.length());
       var steps = 10;
 
       for (var i = 1; i < steps + 1; i++) {
@@ -123,14 +132,19 @@ module.exports = function () {
         var currentRatio = AB.clone().applyAxisAngle(rotationAxis, CA2).lerpVectors(AB, CD, i / steps);
         var currentLength = AB.length() + m / steps * (i - 1);
         rotationAxis = AFCnormal.clone();
-        var FstepVector = FA.clone().applyAxisAngle(rotationAxis, currentAngle);
-        gfx.showVector(FstepVector, F);
+        m = FC.length() / FA.length();
+        mi = m / steps * i;
+        currentLength = FA.length() + m / steps * (i - 1);
+        console.log(m);
+        var FstepVector = FA.clone().applyAxisAngle(rotationAxis, currentAngle).multiplyScalar(mi); //console.log((10 / 2) - i / 2);
+
+        var max = steps / 2; //console.log('i: ', i, ' ' + ((i - 1 % max) / max));
+
+        gfx.showVector(FstepVector, F, black);
         var startingPoint = gfx.movePoint(F, FstepVector);
         gfx.showPoint(startingPoint);
         gfx.showVector(currentRatio, startingPoint);
       }
-
-      console.log(CD.length());
     },
     createCurve: function createCurve() {},
     addGeometries: function addGeometries() {
@@ -169,8 +183,7 @@ module.exports = function () {
       });
       dot = new THREE.Points(dotGeometry, dotMaterial); //scene.add(dot);
 
-      var splineObject = new THREE.Line(geometry, material); //scene.add(splineObject);
-      //dot.position.set(curve.getPoint(.5).x, splineObject.position.y, splineObject.position.z);
+      var splineObject = new THREE.Line(geometry, material); //scene.add(splineObject);			
 
       for (var _i = 1; _i < pointCount * curveSteps + 1; _i += curveSteps) {
         logCurve.push(new THREE.Vector3(_i, 2 * Math.log(_i), 0));
@@ -184,34 +197,53 @@ module.exports = function () {
       logSpline.translateOnAxis(new THREE.Vector3(0, 0, 1), 10);
       logDot = dot.clone(); //scene.add(logDot);
 
-      logDot.position.set(logSplineCurve.getPoint(.5).x, logSpline.position.y, logSpline.position.z); // Affine transformations
-      // let start =  new THREE.Geometry();
-      // start.vertices.push(
-      // 	new THREE.Vector3(0, 0, 0),
-      // 	new THREE.Vector3(2, 0, -5),
-      // 	new THREE.Vector3(2, 0, -10),
-      // 	new THREE.Vector3(0, 0, -15)
-      // );
-      // //gfx.showPoints(start);
-      // let end =  new THREE.Geometry();
-      // end.vertices.push(
-      // 	new THREE.Vector3(-30, 0, 0),
-      // 	new THREE.Vector3(-20, 0, -5),
-      // 	new THREE.Vector3(-15, 0, -10),
-      // 	new THREE.Vector3(-30, 0, -15)
-      // );
-      // let steps = 10;
-      // let interpolations = [];
-      // start.vertices.forEach(function(item, index) {
-      // 	let whole = gfx.createVector(start.vertices[index], end.vertices[index]);
-      // 	for (let i = 0; i < steps; i++) {
-      // 		// multiply whole by linear interpolation
-      // 		let interpolation = whole.length() * (i/steps);
-      // 		let result = gfx.movePoint(item, whole.clone().setLength(interpolation));
-      // 		//gfx.showPoint(result);
-      // 	}
-      // });
-      //gfx.showPoints(end);
+      for (var _i2 = 1; _i2 < pointCount * curveSteps + 1; _i2 += curveSteps) {
+        circleCurve.push(new THREE.Vector3(5 * Math.cos(_i2), 5 * Math.sin(_i2), 0));
+      }
+
+      var circleSplineCurve = new THREE.SplineCurve(circleCurve);
+      points = circleSplineCurve.getPoints(pointCount);
+      geometry = new THREE.BufferGeometry().setFromPoints(points);
+      var circleSpline = new THREE.Line(geometry, material); //scene.add(circleSpline);
+
+      circleSpline.rotation.x += Math.PI / 2;
+      circleDot = dot.clone(); //scene.add(circleDot);
+    },
+    box: function box() {
+      var steps = 100;
+
+      for (var i = steps; i > 0; i--) {
+        var geometry = new THREE.BoxGeometry(10, .01, 10);
+        geometry.scale(i / 10, 1, i / 10);
+        var box = new THREE.Mesh(geometry, wireframeMaterial); //geometry.rotateX(Math.log(2 * Math.PI / steps * i));
+
+        geometry.rotateY(Math.log(2 * Math.PI / steps * i));
+        gfx.drawLine(box.geometry.vertices[0], box.geometry.vertices[1], new THREE.Color('black'), .35);
+        gfx.drawLine(box.geometry.vertices[3], box.geometry.vertices[4], new THREE.Color('black'), .35);
+        gfx.drawLine(box.geometry.vertices[4], box.geometry.vertices[5], new THREE.Color('black'), .35);
+        gfx.drawLine(box.geometry.vertices[5], box.geometry.vertices[0], new THREE.Color('black'), .35); //scene.add(box);
+
+        boxes.push(box);
+        box.rotation.y += Math.log(2 * Math.PI / steps * i);
+      }
+    },
+    pointCloud: function pointCloud() {
+      var points = new THREE.Geometry();
+      var size = 10;
+      var spacing = 5;
+
+      for (var i = 0; i < size + 1; i++) {
+        for (var j = 0; j < size + 1; j++) {
+          points.vertices.push(new THREE.Vector3(i * spacing, 0, j * spacing));
+        }
+      } //gfx.showPoints(points);
+
+
+      for (var _i3 = 0; _i3 < size + 1; _i3++) {
+        for (var _j = size; _j > 0; _j--) {
+          if (points.vertices[_i3 * _j]) gfx.drawLine(points.vertices[_i3], points.vertices[_i3 * _j]), new THREE.Color('black');
+        }
+      }
     },
     bindUIEvents: function bindUIEvents() {
       var self = this;
@@ -550,10 +582,13 @@ module.exports = function () {
           scene.add(mesh);
         }
       },
-      drawLine: function drawLine(pt1, pt2, color) {
+      drawLine: function drawLine(pt1, pt2, color, opacity) {
         color = color || 0x0000ff;
+        opacity = opacity || 1;
         var material = new THREE.LineBasicMaterial({
-          color: color
+          color: color,
+          transparent: true,
+          opacity: opacity
         });
         var geometry = new THREE.Geometry();
         geometry.vertices.push(new THREE.Vector3(pt1.x, pt1.y, pt1.z));
