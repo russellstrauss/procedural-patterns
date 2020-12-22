@@ -24,7 +24,7 @@
     "gulp-watch": "^4.3.5",
     "jshint": "^2.9.5",
     "jshint-stylish": "^2.2.1",
-    "node-notifier": "^5.2.1",
+    "node-notifier": "^8.0.1",
     "three": "^0.107.0",
     "vinyl-source-stream": "^2.0.0"
   }
